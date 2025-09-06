@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}YY壁纸站{% endblock %}</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="/static/fontawesome-free-6.6.0-web/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Vue.js -->
+    <script src="/static/js/vue/vue.min.js"></script>
+    <!-- Axios -->
+    <script src="/static/js/vue/axios.min.js"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1><i class="fas fa-images"></i> YY壁纸</h1>
+                </div>
+                <nav class="nav">
+                    <ul>
+                        <li><a href="/" class="nav-link"><i class="fas fa-home"></i> 首页</a></li>
+                        {% if not session.admin_logged_in %}
+                        <li><a href="/admin/login" class="nav-link"><i class="fas fa-user-shield"></i> 管理员登录</a></li>
+                        {% else %}
+                        <li><a href="/admin/dashboard" class="nav-link"><i class="fas fa-tachometer-alt"></i> 管理面板</a></li>
+                        <li><a href="/admin/logout" class="nav-link"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; <span id="current-year">2025</span> Yoy版权所有</p>
+                <script>
+                    document.getElementById('current-year').textContent = new Date().getFullYear();
+                </script>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

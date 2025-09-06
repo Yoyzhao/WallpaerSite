@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}首页 - 壁纸站{% endblock %}
+
+{% block content %}
+<div class="categories-section">
+    <h2 class="section-title"><i class="fas fa-th-large"></i> 图片分类</h2>
+    <div class="categories-grid">
+        {% for category in categories %}
+        <div class="category-card">
+            <a href="/category/{{ category[0] }}" class="category-link">
+                <div class="category-icon">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <h3 class="category-name">{{ category[1] }}</h3>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="about-section">
+    <div class="about-content">
+        <h2><i class="fas fa-info-circle"></i> 关于网站</h2>
+        <p>欢迎来到壁纸浏览网站！这里收集了各种精美的壁纸图片，您可以通过分类浏览、搜索功能找到喜欢的图片。管理员可以登录后上传新图片、管理分类。</p>
+        <p>使用方法：点击上方分类进入图片浏览页面，可以切换瀑布流和分页式两种视图模式，点击图片查看大图及详情。</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 添加分类卡片的悬停效果
+        const categoryCards = document.querySelectorAll('.category-card');
+        categoryCards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.classList.add('hover');
+            });
+            card.addEventListener('mouseleave', function() {
+                this.classList.remove('hover');
+            });
+        });
+    });
+</script>
+{% endblock %}

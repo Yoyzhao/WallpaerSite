@@ -1,0 +1,299 @@
+/* 全局样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 统一的div基础样式 */
+div {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    line-height: inherit;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* 通用容器样式 - 不应用于main内的container */
+
+/* 通用容器样式 - 不应用于main内的container */
+.container:not(.main > .container) {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+/* 头部样式 */
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo h1 {
+    font-size: 24px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav ul {
+    display: flex;
+    list-style: none;
+    gap: 20px;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 主内容区样式 */
+.main {
+    padding: 40px 0;
+    flex: 1;
+    /* 确保main元素有独立的样式，不与内部div共用 */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 主内容区内部容器样式 */
+.main > .container {
+    /* 为main内的container设置独立样式 */
+    width: 80%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+/* 页脚样式 */
+.footer {
+    background: #333;
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+    width: 100%;
+    margin-top: auto;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 分类页面样式 */
+.categories-section {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.category-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    text-align: center;
+    padding: 30px 20px;
+}
+
+.category-card.hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.category-link {
+    text-decoration: none;
+    color: #333;
+    display: block;
+}
+
+.category-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: #007bff;
+}
+
+.category-name {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* 关于部分样式 */
+.about-section {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.about-content h2 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.about-content p {
+    margin-bottom: 10px;
+    line-height: 1.8;
+}
+
+/* 图片加载动画 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.image-card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    /* 在中等屏幕上调整容器边距 */
+    .container:not(.main > .container) {
+        width: 90%;
+        margin: 0 5%;
+    }
+    
+    /* 中等屏幕上调整main内的container */
+    .main > .container {
+        width: 90%;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .section-title {
+        font-size: 24px;
+    }
+    
+    .categories-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    /* 在小屏幕上进一步调整容器边距 */
+    .container:not(.main > .container) {
+        width: 95%;
+        margin: 0 2.5%;
+    }
+    
+    /* 小屏幕上调整main内的container */
+    .main > .container {
+        width: 95%;
+        margin: 0 auto;
+        padding: 0 10px;
+    }
+    
+    .logo h1 {
+        font-size: 20px;
+    }
+    
+    .main {
+        padding: 20px 0;
+    }
+    
+    .categories-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 分类页面容器样式 */
+.category-page {
+    width: 100%; /* 让category-page完全充满父容器 */
+    max-width: none; /* 移除最大宽度限制 */
+    margin: 0;
+    padding: 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .category-page {
+        width: 90%; /* 中等屏幕上调整为90% */
+        padding: 0 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .category-page {
+        width: 95%; /* 小屏幕上调整为95% */
+        padding: 0 10px;
+    }
+}

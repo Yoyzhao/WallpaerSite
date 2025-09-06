@@ -1,0 +1,639 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ category_name }} - 图片浏览{% endblock %}
+
+{% block head %}
+<style>
+    /* 瀑布流样式 */
+    .masonry-grid {
+        column-count: 4;
+        column-gap: 15px;
+        width: 100%;
+    }
+    
+    .masonry-item {
+        break-inside: avoid;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .masonry-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* 分页视图样式 */
+    .grid-view {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+        width: 100%;
+    }
+    
+    .grid-item {
+        transition: all 0.3s ease;
+    }
+    
+    .grid-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* 图片样式 */
+    .image-card {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+    
+    .image-thumbnail {
+        width: 100%;
+        height: auto;
+        display: block;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        transform-origin: center;
+    }
+    
+    /* 鼠标掠过效果 */
+    .image-thumbnail:hover {
+        transform: scale(1.03);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        opacity: 0.95;
+    }
+    
+    /* 选中状态效果 */
+    .image-thumbnail.selected {
+        transform: scale(0.98);
+        border: 3px solid #007bff;
+        box-shadow: 0 0 0 2px white, 0 8px 25px rgba(0, 123, 255, 0.4);
+    }
+    
+    /* 鼠标悬停时的放大动画 */
+    .image-thumbnail:not(.selected) {
+        transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                    box-shadow 0.3s ease,
+                    opacity 0.3s ease;
+    }
+    
+    /* 选中状态的过渡动画 */
+    .image-thumbnail.selected {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .image-thumbnail.loading {
+        opacity: 0.5;
+    }
+    
+    .image-info {
+        padding: 10px;
+        text-align: center;
+    }
+    
+    .image-filename {
+        font-size: 14px;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* 加载动画 */
+    .loading-spinner {
+        text-align: center;
+        padding: 20px;
+        font-size: 24px;
+        color: #666;
+    }
+    
+    /* 分页控件样式 */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+        padding: 10px;
+    }
+    
+    .pagination-item {
+        margin: 0 5px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+    
+    .pagination-item:hover {
+        background: #f0f0f0;
+    }
+    
+    .pagination-item.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .pagination-item.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    /* 图片查看器样式 */
+    .image-viewer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    
+    .image-viewer.active {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .image-viewer-content {
+        position: relative;
+        max-width: 90%;
+        max-height: 90%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .image-viewer-image {
+        max-width: 100%;
+        max-height: 80vh;
+        border-radius: 8px;
+    }
+    
+    .image-viewer-info {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 15px;
+        margin-top: 10px;
+        border-radius: 8px;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .close-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        font-size: 30px;
+        color: white;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+    
+    .close-btn:hover {
+        transform: rotate(90deg);
+    }
+    
+    /* 视图切换样式 */
+    .view-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .search-container {
+        display: flex;
+        align-items: center;
+    }
+    
+    .search-input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-right: none;
+        border-radius: 4px 0 0 4px;
+        width: 200px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+    
+    .search-btn {
+        padding: 8px 12px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 0 4px 4px 0;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s ease;
+    }
+    
+    .search-btn:hover {
+        background: #0056b3;
+    }
+    
+    /* 统一按钮样式 */
+    .view-mode-switch,
+    .sort-control {
+        display: flex;
+        background: #f0f0f0;
+        border-radius: 4px;
+        padding: 2px;
+    }
+    
+    .view-mode-btn,
+    .sort-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        margin: 0;
+        border: none;
+        background: transparent;
+        color: #666;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        gap: 6px;
+    }
+    
+    .view-mode-btn:not(:last-child),
+    .sort-btn:not(:last-child) {
+        margin-right: 2px;
+    }
+    
+    .view-mode-btn:hover,
+    .sort-btn:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
+    
+    .view-mode-btn.active,
+    .sort-btn.active {
+        background: #007bff;
+        color: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* 统一图标样式 */
+    .view-controls i {
+        font-size: 14px;
+    }
+    
+    /* 响应式布局 */
+    @media (max-width: 1200px) {
+        .masonry-grid {
+            column-count: 3;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .masonry-grid {
+            column-count: 2;
+        }
+        
+        .view-controls {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .search-container {
+            width: 100%;
+        }
+        
+        .search-input {
+            width: 100%;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .masonry-grid {
+            column-count: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="category-page">
+    <h2 class="section-title"><i class="fas fa-images"></i> {{ category_name }}</h2>
+    
+    <!-- 搜索和视图切换控件 -->
+    <div class="view-controls">
+        <div class="search-container">
+            <input type="text" id="search-input" class="search-input" placeholder="搜索图片...">
+            <button id="search-btn" class="search-btn"><i class="fas fa-search"></i></button>
+        </div>
+        <div class="view-mode-switch">
+            <button id="waterfall-btn" class="view-mode-btn active" data-mode="waterfall">
+                <i class="fas fa-th"></i> 瀑布流
+            </button>
+            <button id="grid-btn" class="view-mode-btn" data-mode="grid">
+                <i class="fas fa-th-large"></i> 分页视图
+            </button>
+        </div>
+        <div class="sort-control">
+            <button id="sort-asc-btn" class="sort-btn" data-sort="asc">
+                <i class="fas fa-sort-amount-down"></i> 时间正序
+            </button>
+            <button id="sort-desc-btn" class="sort-btn active" data-sort="desc">
+                <i class="fas fa-sort-amount-up"></i> 时间倒序
+            </button>
+        </div>
+    </div>
+    
+    <!-- 图片容器 -->
+    <div id="image-container" class="image-container">
+    {% raw %}
+        <div id="masonry-grid" class="masonry-grid">
+             <div v-for="image in images" :key="image.id" class="image-item" :data-upload-time="image.upload_time">
+                <div class="image-card">
+                    <img 
+                        :src="image.filepath" 
+                        :alt="image.filename" 
+                        class="image-thumbnail"
+                        @click="viewImage(image)"
+                        @load="onImageLoad"
+                        @error="onImageError"
+                    >
+                    <div class="image-info">
+                        <div class="image-filename">{{ image.filename }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="grid-view" class="grid-view" style="display: none;">
+            <div v-for="image in images" :key="image.id" class="grid-item" :data-upload-time="image.upload_time">
+                <div class="image-card">
+                    <img 
+                        :src="image.filepath" 
+                        :alt="image.filename" 
+                        class="image-thumbnail"
+                        @click="viewImage(image)"
+                        @load="onImageLoad"
+                        @error="onImageError"
+                    >
+                    <div class="image-info">
+                        <div class="image-filename">{{ image.filename }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endraw %}
+    </div>
+    
+    <!-- 加载指示器 -->
+    <div id="loading" class="loading-spinner" style="display: none;">
+        <i class="fas fa-spinner fa-spin"></i> 加载中...
+    </div>
+    
+    <!-- 分页控件 -->
+    <div id="pagination" class="pagination" style="display: none;">
+        <button class="pagination-item" id="prev-page" disabled>
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <div id="page-numbers"></div>
+        <button class="pagination-item" id="next-page">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+</div>
+
+<!-- 图片查看器 -->
+<div id="image-viewer" class="image-viewer">
+    <span class="close-btn"><i class="fas fa-times"></i></span>
+    <div class="image-viewer-content">
+        <img id="viewer-image" class="image-viewer-image" src="" alt="图片预览">
+        <div class="image-viewer-info">
+            <h3 id="viewer-filename"></h3>
+            <p id="viewer-details"></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- 主JavaScript文件 -->
+<script src="/static/js/main.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 获取URL参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const categoryId = urlParams.get('id') || '{{ category_id }}';
+        const categoryName = '{{ category_name }}';
+        
+        // 创建Vue实例
+        const app = new Vue({
+            el: '#image-container',
+            data: {
+                images: [],
+                currentPage: 1,
+                totalPages: 1,
+                totalCount: 0,
+                viewMode: 'waterfall', // 'waterfall' 或 'grid'
+                searchTerm: '',
+                isLoading: false
+            },
+            methods: {
+                // 加载图片
+                loadImages: function(page = 1, search = '', viewMode = this.viewMode) {
+                    this.isLoading = true;
+                    document.getElementById('loading').style.display = 'block';
+                    
+                    axios.get(`/api/images/${categoryId}`, {
+                        params: {
+                            page: page,
+                            per_page: viewMode === 'grid' ? 20 : 50, // 瀑布流加载更多图片
+                            search: search,
+                            view_mode: viewMode
+                        }
+                    })
+                    .then(response => {
+                        this.images = response.data.images;
+                        this.currentPage = response.data.current_page;
+                        this.totalPages = response.data.total_pages;
+                        this.totalCount = response.data.total_count;
+                        this.viewMode = response.data.view_mode;
+                        
+                        // 更新视图显示
+                        this.updateView();
+                        // 更新分页控件
+                        this.updatePagination();
+                    })
+                    .catch(error => {
+                        console.error('加载图片失败:', error);
+                        alert('加载图片失败，请重试');
+                    })
+                    .finally(() => {
+                        this.isLoading = false;
+                        document.getElementById('loading').style.display = 'none';
+                    });
+                },
+                
+                // 查看图片详情
+                viewImage: function(image) {
+                    const viewer = document.getElementById('image-viewer');
+                    const viewerImage = document.getElementById('viewer-image');
+                    const viewerFilename = document.getElementById('viewer-filename');
+                    const viewerDetails = document.getElementById('viewer-details');
+                    
+                    // 设置图片信息
+                    viewerImage.src = image.filepath;
+                    viewerFilename.textContent = image.filename;
+                    viewerDetails.textContent = `上传时间: ${image.upload_time}`;
+                    
+                    // 显示查看器
+                    viewer.classList.add('active');
+                    // 防止页面滚动
+                    document.body.style.overflow = 'hidden';
+                },
+                
+                // 图片加载完成事件
+                onImageLoad: function(e) {
+                    e.target.style.opacity = '1';
+                },
+                
+                // 图片加载失败事件
+                onImageError: function(e) {
+                    // 移除error事件监听器，防止无限循环
+                    e.target.removeEventListener('error', this.onImageError);
+                    // 添加详细错误日志
+                    console.error('图片加载失败:', e.target.src);
+                    console.log('图片信息:', e.target.alt);
+                    // 设置默认的错误占位图，使用正确的webp格式
+                    e.target.src = '/static/images/error.webp';
+                    e.target.title = '图片加载失败: ' + e.target.alt;
+                    // 如果error.webp也加载失败，使用内联base64图片
+                    e.target.onerror = function() {
+                        this.onerror = null;
+                        console.error('错误占位图也加载失败');
+                        this.src = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22200%22 height%3D%22150%22 viewBox%3D%220 0 200 150%22%3E%3Crect width%3D%22200%22 height%3D%22150%22 fill%3D%22%23f0f0f0%22%2F%3E%3Ctext x%3D%22100%22 y%3D%2285%22 font-family%3D%22Arial%22 font-size%3D%2214%22 text-anchor%3D%22middle%22 fill%3D%22%23999%22%3E图片加载失败%3C%2Ftext%3E%3C%2Fsvg%3E';
+                    };
+                },
+                
+                // 更新视图显示
+                updateView: function() {
+                    const masonryGrid = document.getElementById('masonry-grid');
+                    const gridView = document.getElementById('grid-view');
+                    const pagination = document.getElementById('pagination');
+                    
+                    if (this.viewMode === 'waterfall') {
+                        masonryGrid.style.display = 'block';
+                        gridView.style.display = 'none';
+                        pagination.style.display = 'none';
+                    } else {
+                        masonryGrid.style.display = 'none';
+                        gridView.style.display = 'grid';
+                        pagination.style.display = 'flex';
+                    }
+                    
+                    // 更新视图切换按钮状态
+                    document.getElementById('waterfall-btn').classList.toggle('active', this.viewMode === 'waterfall');
+                    document.getElementById('grid-btn').classList.toggle('active', this.viewMode === 'grid');
+                },
+                
+                // 更新分页控件
+                updatePagination: function() {
+                    const pageNumbers = document.getElementById('page-numbers');
+                    const prevPage = document.getElementById('prev-page');
+                    const nextPage = document.getElementById('next-page');
+                    
+                    // 清空现有页码
+                    pageNumbers.innerHTML = '';
+                    
+                    // 生成页码按钮
+                    for (let i = 1; i <= this.totalPages; i++) {
+                        const pageBtn = document.createElement('button');
+                        pageBtn.className = `pagination-item ${i === this.currentPage ? 'active' : ''}`;
+                        pageBtn.textContent = i;
+                        
+                        // 添加点击事件
+                        pageBtn.addEventListener('click', () => {
+                            this.loadImages(i, this.searchTerm, this.viewMode);
+                        });
+                        
+                        pageNumbers.appendChild(pageBtn);
+                    }
+                    
+                    // 更新上一页/下一页按钮状态
+                    prevPage.disabled = this.currentPage === 1;
+                    prevPage.classList.toggle('disabled', this.currentPage === 1);
+                    
+                    nextPage.disabled = this.currentPage === this.totalPages;
+                    nextPage.classList.toggle('disabled', this.currentPage === this.totalPages);
+                }
+            },
+            mounted: function() {
+                // 初始加载图片
+                this.loadImages();
+                
+                // 绑定视图切换按钮事件
+                document.getElementById('waterfall-btn').addEventListener('click', () => {
+                    this.viewMode = 'waterfall';
+                    this.loadImages(1, this.searchTerm, this.viewMode);
+                });
+                
+                document.getElementById('grid-btn').addEventListener('click', () => {
+                    this.viewMode = 'grid';
+                    this.loadImages(1, this.searchTerm, this.viewMode);
+                });
+                
+                // 绑定搜索按钮事件
+                document.getElementById('search-btn').addEventListener('click', () => {
+                    const searchInput = document.getElementById('search-input');
+                    this.searchTerm = searchInput.value;
+                    this.loadImages(1, this.searchTerm, this.viewMode);
+                });
+                
+                // 绑定搜索输入框回车事件
+                document.getElementById('search-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const searchInput = document.getElementById('search-input');
+                        this.searchTerm = searchInput.value;
+                        this.loadImages(1, this.searchTerm, this.viewMode);
+                    }
+                });
+                
+                // 绑定分页按钮事件
+                document.getElementById('prev-page').addEventListener('click', () => {
+                    if (this.currentPage > 1) {
+                        this.loadImages(this.currentPage - 1, this.searchTerm, this.viewMode);
+                    }
+                });
+                
+                document.getElementById('next-page').addEventListener('click', () => {
+                    if (this.currentPage < this.totalPages) {
+                        this.loadImages(this.currentPage + 1, this.searchTerm, this.viewMode);
+                    }
+                });
+                
+                // 绑定图片查看器关闭事件
+                document.getElementById('image-viewer').addEventListener('click', (e) => {
+                    // 检查点击目标是否是查看器背景、关闭按钮或关闭图标
+                    if (e.target === document.getElementById('image-viewer') || 
+                        e.target.classList.contains('close-btn') || 
+                        e.target.classList.contains('fa-times')) {
+                        document.getElementById('image-viewer').classList.remove('active');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}
