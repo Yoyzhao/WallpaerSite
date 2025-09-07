@@ -142,65 +142,95 @@
         cursor: not-allowed;
     }
     
-    /* 图片查看器样式 */
-    .image-viewer {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
-    
-    .image-viewer.active {
-        opacity: 1;
-        visibility: visible;
-    }
-    
-    .image-viewer-content {
-        position: relative;
-        max-width: 90%;
-        max-height: 90%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .image-viewer-image {
-        max-width: 100%;
-        max-height: 80vh;
-        border-radius: 8px;
-    }
-    
-    .image-viewer-info {
-        background: rgba(255, 255, 255, 0.9);
-        padding: 15px;
-        margin-top: 10px;
-        border-radius: 8px;
-        width: 100%;
-        text-align: center;
-    }
-    
-    .close-btn {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        font-size: 30px;
-        color: white;
-        cursor: pointer;
-        transition: transform 0.3s ease;
-    }
-    
-    .close-btn:hover {
-        transform: rotate(90deg);
-    }
+    /* 图片查看器样式已移至页面底部的完整定义 */
+        
+        /* 关闭按钮样式 */
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 2em;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+            z-index: 1001;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 翻页按钮样式 */
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            transition: background 0.3s ease;
+            z-index: 1001;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .prev-btn {
+            left: 20px;
+        }
+        
+        .next-btn {
+            right: 20px;
+        }
+        
+        /* 操作按钮样式 */
+        .image-viewer-actions {
+            position: absolute;
+            bottom: 80px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .action-btn {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.3s ease;
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .delete-btn {
+            background: rgba(220, 20, 60, 0.7);
+        }
+        
+        .delete-btn:hover {
+            background: rgba(220, 20, 60, 0.9);
+        }
     
     /* 视图切换样式 */
     .view-controls {
@@ -419,7 +449,19 @@
 <div id="image-viewer" class="image-viewer">
     <span class="close-btn"><i class="fas fa-times"></i></span>
     <div class="image-viewer-content">
+        <!-- 翻页按钮 -->
+        <button id="prev-image" class="nav-btn prev-btn"><i class="fas fa-chevron-left"></i></button>
+        <button id="next-image" class="nav-btn next-btn"><i class="fas fa-chevron-right"></i></button>
+        
         <img id="viewer-image" class="image-viewer-image" src="" alt="图片预览">
+        
+        <!-- 操作按钮 -->
+        <div class="image-viewer-actions">
+            <button id="view-details" class="action-btn" onclick="toggleImageDetails(); return false;"><i class="fas fa-info-circle"></i> 详情</button>
+            <button id="download-image" class="action-btn" onclick="toggleDownload(); return false;"><i class="fas fa-download"></i> 下载</button>
+            <button id="delete-image" class="action-btn delete-btn" onclick="deleteImage(); return false;"><i class="fas fa-trash-alt"></i> 删除</button>
+        </div>
+        
         <div class="image-viewer-info">
             <h3 id="viewer-filename"></h3>
             <p id="viewer-details"></p>
@@ -429,17 +471,203 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- 图片查看器样式 -->
+<style>
+    /* 图片查看器基础样式 */
+    .image-viewer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        display: none;
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .image-viewer.active {
+        display: flex;
+    }
+    
+    /* 关闭按钮样式 */
+    .close-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s ease, background-color 0.3s ease;
+        z-index: 1002;
+    }
+    
+    .image-viewer:hover .close-btn {
+        opacity: 1;
+    }
+    
+    .close-btn:hover {
+        background-color: rgba(255, 0, 0, 0.7);
+    }
+    
+    /* 图片查看器内容容器 */
+    .image-viewer-content {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* 图片自适应屏幕 */
+    .image-viewer-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        position: relative;
+        z-index: 1000;
+    }
+    
+    /* 导航按钮样式 - 放置在屏幕最左侧和最右侧 */
+    .nav-btn {
+        position: fixed;
+        top: 50%;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        cursor: pointer;
+        border: none;
+        transform: translateY(-50%);
+        opacity: 0;
+        transition: opacity 0.3s ease, background-color 0.3s ease, transform 0.2s ease;
+        z-index: 1001;
+    }
+    
+    .image-viewer:hover .nav-btn {
+        opacity: 1;
+    }
+    
+    .nav-btn:hover {
+        background-color: rgba(0, 0, 0, 0.8);
+        transform: translateY(-50%) scale(1.1);
+    }
+    
+    .prev-btn {
+        left: 20px;
+    }
+    
+    .next-btn {
+        right: 20px;
+    }
+    
+    /* 操作按钮样式 - 放置在屏幕右下侧 */
+    .image-viewer-actions {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        display: flex;
+        gap: 15px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1001;
+    }
+    
+    .image-viewer:hover .image-viewer-actions {
+        opacity: 1;
+    }
+    
+    .action-btn {
+        padding: 12px 24px;
+        border-radius: 30px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    
+    .action-btn:hover {
+        background-color: rgba(0, 0, 0, 0.9);
+        transform: scale(1.05);
+    }
+    
+    .delete-btn {
+        background-color: rgba(255, 0, 0, 0.7);
+    }
+    
+    .delete-btn:hover {
+        background-color: rgba(255, 0, 0, 0.9);
+    }
+    
+    /* 图片信息样式 - 调整层级确保能在图片查看器上显示 */
+    .image-viewer-info {
+        position: fixed;
+        bottom: 30px;
+        left: 30px;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 15px 25px;
+        border-radius: 8px;
+        max-width: 60%;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 1002; /* 提高层级，确保在图片查看器上显示 */
+    }
+    
+    .image-viewer-info.show {
+        opacity: 1;
+        pointer-events: none; /* 即使显示也不捕获点击事件 */
+    }
+    
+    .image-viewer-info h3 {
+        margin: 0 0 10px 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+    
+    .image-viewer-info p {
+        margin: 0;
+        font-size: 14px;
+        opacity: 0.9;
+    }
+</style>
+
 <!-- 主JavaScript文件 -->
 <script src="/static/js/main.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // 初始化alertShown和confirmShown变量，确保第一次使用时状态正确
+        window.alertShown = false;
+        window.confirmShown = false;
+        
         // 获取URL参数
         const urlParams = new URLSearchParams(window.location.search);
         const categoryId = urlParams.get('id') || '{{ category_id }}';
         const categoryName = '{{ category_name }}';
         
-        // 创建Vue实例
-        const app = new Vue({
+        // 创建Vue实例并赋值给变量
+        const vm = new Vue({
             el: '#image-container',
             data: {
                 images: [],
@@ -448,18 +676,25 @@
                 totalCount: 0,
                 viewMode: 'waterfall', // 'waterfall' 或 'grid'
                 searchTerm: '',
-                isLoading: false
+                isLoading: false,
+                isLoadingMore: false,
+                currentBatch: 0, // 当前加载的批次
+                batchSize: 20, // 每批次加载的图片数量
+                currentViewingImageIndex: -1 // 当前查看的图片索引
             },
             methods: {
-                // 加载图片
+                // 加载图片（初始加载）
                 loadImages: function(page = 1, search = '', viewMode = this.viewMode) {
                     this.isLoading = true;
                     document.getElementById('loading').style.display = 'block';
                     
+                    // 重置批次计数
+                    this.currentBatch = 0;
+                    
                     axios.get(`/api/images/${categoryId}`, {
                         params: {
                             page: page,
-                            per_page: viewMode === 'grid' ? 20 : 50, // 瀑布流加载更多图片
+                            per_page: viewMode === 'grid' ? 20 : this.batchSize, // 瀑布流首次加载一批图片
                             search: search,
                             view_mode: viewMode
                         }
@@ -475,6 +710,11 @@
                         this.updateView();
                         // 更新分页控件
                         this.updatePagination();
+                        
+                        // 瀑布流模式下，添加滚动监听
+                        if (this.viewMode === 'waterfall') {
+                            this.setupScrollListener();
+                        }
                     })
                     .catch(error => {
                         console.error('加载图片失败:', error);
@@ -486,22 +726,209 @@
                     });
                 },
                 
+                // 加载更多图片（瀑布流模式）
+                loadMoreImages: function() {
+                    // 检查是否已经加载了所有图片或者已经在加载中
+                    if (this.isLoadingMore || this.images.length >= this.totalCount) {
+                        return;
+                    }
+                    
+                    this.isLoadingMore = true;
+                    const nextPage = this.currentBatch + 2; // 下一批次
+                    
+                    axios.get(`/api/images/${categoryId}`, {
+                        params: {
+                            page: nextPage,
+                            per_page: this.batchSize,
+                            search: this.searchTerm,
+                            view_mode: 'waterfall'
+                        }
+                    })
+                    .then(response => {
+                        if (response.data.images && response.data.images.length > 0) {
+                            // 将新图片添加到现有数组中
+                            this.images = [...this.images, ...response.data.images];
+                            this.currentBatch = nextPage - 1;
+                            this.totalCount = response.data.total_count;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('加载更多图片失败:', error);
+                    })
+                    .finally(() => {
+                        this.isLoadingMore = false;
+                    });
+                },
+                
+                // 设置滚动监听
+                setupScrollListener: function() {
+                    // 移除旧的监听（如果有）
+                    window.removeEventListener('scroll', this.handleScroll);
+                    // 添加新的监听
+                    window.addEventListener('scroll', this.handleScroll);
+                },
+                
+                // 处理滚动事件
+                handleScroll: function() {
+                    // 检查是否滚动到底部
+                    const scrollHeight = document.documentElement.scrollHeight;
+                    const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+                    const clientHeight = document.documentElement.clientHeight;
+                    
+                    // 当滚动到距离底部100px时，加载更多图片
+                    if (scrollTop + clientHeight >= scrollHeight - 100) {
+                        this.loadMoreImages();
+                    }
+                },
+                
                 // 查看图片详情
                 viewImage: function(image) {
-                    const viewer = document.getElementById('image-viewer');
+                    // 记录当前查看的图片索引
+                    this.currentViewingImageIndex = this.images.findIndex(img => img.id === image.id);
+                    
+                    // 更新图片查看器
+                    const imageViewer = document.getElementById('image-viewer');
                     const viewerImage = document.getElementById('viewer-image');
                     const viewerFilename = document.getElementById('viewer-filename');
                     const viewerDetails = document.getElementById('viewer-details');
                     
-                    // 设置图片信息
-                    viewerImage.src = image.filepath;
-                    viewerFilename.textContent = image.filename;
-                    viewerDetails.textContent = `上传时间: ${image.upload_time}`;
-                    
-                    // 显示查看器
-                    viewer.classList.add('active');
-                    // 防止页面滚动
-                    document.body.style.overflow = 'hidden';
+                    if (viewerImage && viewerFilename && viewerDetails && imageViewer) {
+                        // 设置图片源和信息
+                        viewerImage.src = image.filepath;
+                        viewerFilename.textContent = image.filename;
+                        viewerDetails.textContent = `尺寸: ${image.width}x${image.height} | 大小: ${(image.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(image.upload_time).toLocaleString()}`;
+                        
+                        // 显示图片查看器
+                        imageViewer.classList.add('active');
+                        document.body.style.overflow = 'hidden'; // 防止页面滚动
+                    }
+                },
+                
+                // 关闭图片查看器
+                closeImageViewer: function() {
+                    const imageViewer = document.getElementById('image-viewer');
+                    if (imageViewer && imageViewer.classList.contains('active')) {
+                        imageViewer.classList.remove('active');
+                        document.body.style.overflow = ''; // 恢复页面滚动
+                    }
+                },
+                
+                // 查看下一张图片
+                viewNextImage: function() {
+                    if (this.currentViewingImageIndex < this.images.length - 1) {
+                        this.currentViewingImageIndex++;
+                        const nextImage = this.images[this.currentViewingImageIndex];
+                        
+                        // 更新图片查看器
+                        const viewerImage = document.getElementById('viewer-image');
+                        const viewerFilename = document.getElementById('viewer-filename');
+                        const viewerDetails = document.getElementById('viewer-details');
+                        
+                        if (viewerImage && viewerFilename && viewerDetails) {
+                            // 重置图片状态（缩放、位置等）
+                            viewerImage.style.transform = 'translate(0, 0) scale(1)';
+                            
+                            viewerImage.src = nextImage.filepath;
+                            viewerFilename.textContent = nextImage.filename;
+                            viewerDetails.textContent = `尺寸: ${nextImage.width}x${nextImage.height} | 大小: ${(nextImage.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(nextImage.upload_time).toLocaleString()}`;
+                        }
+                    }
+                },
+                
+                // 查看上一张图片
+                viewPrevImage: function() {
+                    if (this.currentViewingImageIndex > 0) {
+                        this.currentViewingImageIndex--;
+                        const prevImage = this.images[this.currentViewingImageIndex];
+                        
+                        // 更新图片查看器
+                        const viewerImage = document.getElementById('viewer-image');
+                        const viewerFilename = document.getElementById('viewer-filename');
+                        const viewerDetails = document.getElementById('viewer-details');
+                        
+                        if (viewerImage && viewerFilename && viewerDetails) {
+                            // 重置图片状态（缩放、位置等）
+                            viewerImage.style.transform = 'translate(0, 0) scale(1)';
+                            
+                            viewerImage.src = prevImage.filepath;
+                            viewerFilename.textContent = prevImage.filename;
+                            viewerDetails.textContent = `尺寸: ${prevImage.width}x${prevImage.height} | 大小: ${(prevImage.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(prevImage.upload_time).toLocaleString()}`;
+                        }
+                    }
+                },
+                
+
+                
+                // 删除图片
+                deleteCurrentImage: function() {
+                    console.log('deleteCurrentImage called');
+                    if (this.currentViewingImageIndex >= 0 && this.images[this.currentViewingImageIndex]) {
+                        // 使用自定义的确认对话框替代浏览器默认的confirm
+                        if (this.customConfirm('确定要删除这张图片吗？此操作不可恢复。')) {
+                            const currentImage = this.images[this.currentViewingImageIndex];
+                            
+                            // 调用API删除图片
+                            axios.delete(`/api/images/${currentImage.id}`)
+                                .then(response => {
+                                    this.customAlert('图片删除成功');
+                                    // 从数组中移除图片
+                                    this.images.splice(this.currentViewingImageIndex, 1);
+                                    
+                                    // 如果还有图片，显示下一张或上一张
+                                    if (this.images.length > 0) {
+                                        // 如果删除的是最后一张，显示上一张
+                                        if (this.currentViewingImageIndex >= this.images.length) {
+                                            this.currentViewingImageIndex = this.images.length - 1;
+                                        }
+                                        
+                                        const newImage = this.images[this.currentViewingImageIndex];
+                                        
+                                        // 更新图片查看器
+                                        const viewerImage = document.getElementById('viewer-image');
+                                        const viewerFilename = document.getElementById('viewer-filename');
+                                        const viewerDetails = document.getElementById('viewer-details');
+                                        
+                                        if (viewerImage && viewerFilename && viewerDetails) {
+                                            viewerImage.src = newImage.filepath;
+                                            viewerFilename.textContent = newImage.filename;
+                                            viewerDetails.textContent = `尺寸: ${newImage.width}x${newImage.height} | 大小: ${(newImage.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(newImage.upload_time).toLocaleString()}`;
+                                        }
+                                    } else {
+                                        // 如果没有图片了，关闭查看器
+                                        this.closeImageViewer();
+                                        // 重新加载页面数据
+                                        this.loadImages();
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('删除图片失败:', error);
+                                    this.customAlert('删除图片失败，请重试。');
+                                });
+                        }
+                    }
+                },
+                
+
+                
+                // 下载图片
+                downloadCurrentImage: function() {
+                    if (this.currentViewingImageIndex >= 0 && this.images[this.currentViewingImageIndex]) {
+                        const currentImage = this.images[this.currentViewingImageIndex];
+                        const imageUrl = currentImage.filepath;
+                        const filename = currentImage.filename;
+                        
+                        // 创建临时链接并触发下载
+                        const link = document.createElement('a');
+                        link.href = imageUrl;
+                        link.download = filename;
+                        
+                        // 触发点击事件
+                        document.body.appendChild(link);
+                        link.click();
+                        
+                        // 清理
+                        document.body.removeChild(link);
+                    }
                 },
                 
                 // 图片加载完成事件
@@ -532,17 +959,21 @@
                     const masonryGrid = document.getElementById('masonry-grid');
                     const gridView = document.getElementById('grid-view');
                     const pagination = document.getElementById('pagination');
-                    
+                     
                     if (this.viewMode === 'waterfall') {
                         masonryGrid.style.display = 'block';
                         gridView.style.display = 'none';
                         pagination.style.display = 'none';
+                        // 瀑布流模式下，添加滚动监听
+                        this.setupScrollListener();
                     } else {
                         masonryGrid.style.display = 'none';
                         gridView.style.display = 'grid';
                         pagination.style.display = 'flex';
+                        // 非瀑布流模式下，移除滚动监听
+                        window.removeEventListener('scroll', this.handleScroll);
                     }
-                    
+                     
                     // 更新视图切换按钮状态
                     document.getElementById('waterfall-btn').classList.toggle('active', this.viewMode === 'waterfall');
                     document.getElementById('grid-btn').classList.toggle('active', this.viewMode === 'grid');
@@ -627,13 +1058,162 @@
                 document.getElementById('image-viewer').addEventListener('click', (e) => {
                     // 检查点击目标是否是查看器背景、关闭按钮或关闭图标
                     if (e.target === document.getElementById('image-viewer') || 
-                        e.target.classList.contains('close-btn') || 
+                        e.target.classList.contains('close-btn') ||
+                        e.target.closest('.close-btn') ||
                         e.target.classList.contains('fa-times')) {
-                        document.getElementById('image-viewer').classList.remove('active');
+                        this.closeImageViewer();
                     }
+                });
+                
+                // ESC键关闭查看器
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeImageViewer();
+                    }
+                });
+                
+
+                
+                // 删除按钮的事件处理已在HTML中通过onclick属性直接设置
+                // 并调用全局的deleteImage函数，确保最简单可靠的行为
+                
+                // 确保离开页面前也恢复滚动
+                window.addEventListener('beforeunload', () => {
+                    document.body.style.overflow = '';
+                });
+                
+                // 添加额外的安全检查，确保在任何情况下都能恢复滚动
+                const safetyCheckInterval = setInterval(() => {
+                    const imageViewer = document.getElementById('image-viewer');
+                    if (imageViewer && !imageViewer.classList.contains('active') && document.body.style.overflow === 'hidden') {
+                        document.body.style.overflow = '';
+                    }
+                }, 1000);
+                
+                // 在组件销毁时清除定时器和滚动监听
+                this.$once('hook:beforeDestroy', () => {
+                    clearInterval(safetyCheckInterval);
+                    window.removeEventListener('scroll', this.handleScroll);
                 });
             }
         });
+        
+        // 将Vue实例赋值给window.app，以便全局函数和main.js访问
+        window.app = vm;
     });
-</script>
+// 全局函数：显示/隐藏图片详情
+function toggleImageDetails() {
+    try {
+        console.log('全局toggleImageDetails函数被调用');
+        const imageViewerInfo = document.querySelector('.image-viewer-info');
+        const viewerFilename = document.getElementById('viewer-filename');
+        const viewerDetails = document.getElementById('viewer-details');
+        
+        if (imageViewerInfo && viewerFilename && viewerDetails) {
+            // 检查当前显示状态
+            const isCurrentlyShowing = imageViewerInfo.classList.contains('show');
+            
+            // 如果是显示详情，先填充内容
+            if (!isCurrentlyShowing) {
+                // 尝试从Vue实例获取当前图片信息
+                if (window.app && window.app.currentViewingImageIndex >= 0 && window.app.images[window.app.currentViewingImageIndex]) {
+                    const currentImage = window.app.images[window.app.currentViewingImageIndex];
+                    viewerFilename.textContent = currentImage.filename;
+                    
+                    // 添加错误处理，使用默认值替代undefined和NaN
+                    const width = currentImage.width || '未知';
+                    const height = currentImage.height || '未知';
+                    const size = currentImage.size && !isNaN(currentImage.size) ? (currentImage.size / 1024).toFixed(1) : '未知';
+                    const uploadTime = currentImage.upload_time ? new Date(currentImage.upload_time).toLocaleString() : '未知';
+                    
+                    viewerDetails.textContent = `尺寸: ${width}x${height} | 大小: ${size}KB | 上传时间: ${uploadTime}`;
+                } else {
+                    // 即使没有图片信息，也显示一个默认的提示
+                    viewerFilename.textContent = '图片详情';
+                    viewerDetails.textContent = '点击图片可查看详细信息';
+                }
+            }
+            
+            // 切换显示状态
+            if (isCurrentlyShowing) {
+                imageViewerInfo.classList.remove('show');
+                console.log('已隐藏详情信息');
+            } else {
+                imageViewerInfo.classList.add('show');
+                console.log('已显示详情信息');
+            }
+            
+            // 强制重绘以确保CSS更新
+            imageViewerInfo.offsetHeight;
+        } else {
+            console.error('未找到必要的信息显示元素');
+        }
+    } catch (error) {
+        console.error('toggleImageDetails函数执行错误:', error);
+    }
+}
+
+// 详情按钮、下载按钮和删除按钮的事件处理已在HTML中直接通过onclick属性设置
+// 这样可以确保每个按钮只绑定一次事件，避免多次点击确认对话框的问题
+
+    
+    // 全局函数：下载图片
+    window.toggleDownload = function() {
+        console.log('toggleDownload called');
+        if (window.app && typeof window.app.downloadCurrentImage === 'function') {
+            window.app.downloadCurrentImage();
+        }
+        return false;
+    };
+    
+    // 全局函数：删除图片
+    function deleteImage() {
+        console.log('deleteImage called');
+        if (window.app && window.app.currentViewingImageIndex >= 0 && window.app.images[window.app.currentViewingImageIndex]) {
+            // 使用原生confirm对话框，确保最简单可靠的行为
+            if (confirm('确定要删除这张图片吗？此操作不可恢复。')) {
+                const currentImage = window.app.images[window.app.currentViewingImageIndex];
+                
+                // 调用API删除图片
+                axios.delete(`/api/images/${currentImage.id}`)
+                    .then(response => {
+                        alert('图片删除成功');
+                        // 从数组中移除图片
+                        window.app.images.splice(window.app.currentViewingImageIndex, 1);
+                        
+                        // 如果还有图片，显示下一张或上一张
+                        if (window.app.images.length > 0) {
+                            // 如果删除的是最后一张，显示上一张
+                            if (window.app.currentViewingImageIndex >= window.app.images.length) {
+                                window.app.currentViewingImageIndex = window.app.images.length - 1;
+                            }
+                            
+                            const newImage = window.app.images[window.app.currentViewingImageIndex];
+                            
+                            // 更新图片查看器
+                            const viewerImage = document.getElementById('viewer-image');
+                            const viewerFilename = document.getElementById('viewer-filename');
+                            const viewerDetails = document.getElementById('viewer-details');
+                            
+                            if (viewerImage && viewerFilename && viewerDetails) {
+                                viewerImage.src = newImage.filepath;
+                                viewerFilename.textContent = newImage.filename;
+                                viewerDetails.textContent = `尺寸: ${newImage.width}x${newImage.height} | 大小: ${(newImage.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(newImage.upload_time).toLocaleString()}`;
+                            }
+                        } else {
+                            // 如果没有图片了，关闭查看器
+                            window.app.closeImageViewer();
+                            // 重新加载页面数据
+                            window.app.loadImages();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('删除图片失败:', error);
+                        alert('删除图片失败，请重试。');
+                    });
+            }
+        }
+        return false;
+    }
+    </script>
 {% endblock %}

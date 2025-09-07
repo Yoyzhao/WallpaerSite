@@ -5,6 +5,13 @@ import hashlib
 import json
 from datetime import datetime
 import re
+import pytz
+# 添加Pillow库用于获取图片尺寸
+try:
+    from PIL import Image
+except ImportError:
+    # 如果没有安装Pillow，设置一个标志
+    Image = None
 
 app = Flask(__name__, 
             static_folder='../static',
@@ -288,22 +295,40 @@ def get_category_images(category_id):
         formatted_images = []
         for img in result['images']:
             # 数据库返回的顺序是: id, filename, filepath, upload_time
-            # 从完整路径中提取相对于uploads目录的路径
-            # 获取uploads目录的绝对路径
-            uploads_abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'uploads'))
-            # 计算图片文件相对于uploads目录的路径
-            rel_path = os.path.relpath(img[2], uploads_abs_path)
-            # 将Windows路径分隔符替换为URL路径分隔符
-            rel_path = rel_path.replace('\\', '/')
-            # 生成正确的图片URL路径
-            image_url = url_for('serve_uploads', filename=rel_path)
-            
-            formatted_images.append({
-                'id': img[0],
-                'filename': img[1],
-                'filepath': image_url,
-                'upload_time': img[3]
-            })
+                # 从完整路径中提取相对于uploads目录的路径
+                # 获取uploads目录的绝对路径
+                uploads_abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'uploads'))
+                # 计算图片文件相对于uploads目录的路径
+                rel_path = os.path.relpath(img[2], uploads_abs_path)
+                # 将Windows路径分隔符替换为URL路径分隔符
+                rel_path = rel_path.replace('\\', '/')
+                # 生成正确的图片URL路径
+                image_url = url_for('serve_uploads', filename=rel_path)
+                
+                # 处理时间戳，转换为UTC+8时间
+                upload_time = img[3]
+                if isinstance(upload_time, str):
+                    # 如果是字符串形式的时间戳，尝试解析
+                    try:
+                        # 尝试解析SQLite的时间戳格式
+                        dt = datetime.strptime(upload_time, '%Y-%m-%d %H:%M:%S')
+                        # 设置为UTC+8时区
+                        utc8_tz = pytz.timezone('Asia/Shanghai')
+                        # 假设数据库中的时间是UTC时间，需要转换
+                        dt_utc = pytz.utc.localize(dt)
+                        dt_utc8 = dt_utc.astimezone(utc8_tz)
+                        # 格式化输出为UTC+8时间
+                        upload_time = dt_utc8.strftime('%Y-%m-%d %H:%M:%S')
+                    except ValueError:
+                        # 如果解析失败，保持原格式
+                        pass
+                
+                formatted_images.append({
+                    'id': img[0],
+                    'filename': img[1],
+                    'filepath': image_url,
+                    'upload_time': upload_time
+                })
             
         return jsonify({
             'success': True,
@@ -530,9 +555,11 @@ def admin_upload():
         filename = file.filename
         file_path = os.path.join(folder_path, filename)
         
-        # 如果文件已存在，添加时间戳避免覆盖
+        # 如果文件已存在，添加UTC+8时间戳避免覆盖
         if os.path.exists(file_path):
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            # 设置为UTC+8时区
+            utc8_tz = pytz.timezone('Asia/Shanghai')
+            timestamp = datetime.now(utc8_tz).strftime('%Y%m%d%H%M%S')
             name, ext = os.path.splitext(filename)
             filename = f"{name}_{timestamp}{ext}"
             file_path = os.path.join(folder_path, filename)
@@ -604,11 +631,54 @@ def api_images(category_id):
         # 生成正确的图片URL路径
         image_url = url_for('serve_uploads', filename=rel_path)
         
+        # 处理时间戳，转换为UTC+8时间
+        upload_time = img[3]
+        if isinstance(upload_time, str):
+            # 如果是字符串形式的时间戳，尝试解析
+            try:
+                # 尝试解析SQLite的时间戳格式
+                dt = datetime.strptime(upload_time, '%Y-%m-%d %H:%M:%S')
+                # 设置为UTC+8时区
+                utc8_tz = pytz.timezone('Asia/Shanghai')
+                # 假设数据库中的时间是UTC时间，需要转换
+                dt_utc = pytz.utc.localize(dt)
+                dt_utc8 = dt_utc.astimezone(utc8_tz)
+                # 格式化输出为UTC+8时间
+                upload_time = dt_utc8.strftime('%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                # 如果解析失败，保持原格式
+                pass
+        
+        # 获取图片实际尺寸和文件大小
+        width = None
+        height = None
+        size = None
+        
+        # 尝试获取文件大小
+        try:
+            # 获取原始文件的绝对路径
+            original_file_path = img[2]  # 这是数据库中存储的原始文件路径
+            if os.path.exists(original_file_path):
+                size = os.path.getsize(original_file_path)  # 获取文件大小（字节）
+        except Exception as e:
+            print(f"获取文件大小失败: {e}")
+        
+        # 尝试获取图片尺寸
+        try:
+            if Image and os.path.exists(original_file_path):
+                with Image.open(original_file_path) as img_obj:
+                    width, height = img_obj.size
+        except Exception as e:
+            print(f"获取图片尺寸失败: {e}")
+        
         formatted_images.append({
             'id': img[0],
             'filename': img[1],
             'filepath': image_url,
-            'upload_time': img[3]
+            'upload_time': upload_time,
+            'width': width,
+            'height': height,
+            'size': size
         })
     
     return jsonify({
@@ -630,16 +700,65 @@ def api_image_detail(image_id):
     relative_path = os.path.relpath(image[2], os.path.dirname(app.root_path))
     relative_path = relative_path.replace('\\', '/')
     
+    # 处理时间戳，转换为UTC+8时间
+    upload_time = image[2]
+    if isinstance(upload_time, str):
+        # 如果是字符串形式的时间戳，尝试解析
+        try:
+            # 尝试解析SQLite的时间戳格式
+            dt = datetime.strptime(upload_time, '%Y-%m-%d %H:%M:%S')
+            # 设置为UTC+8时区
+            utc8_tz = pytz.timezone('Asia/Shanghai')
+            # 假设数据库中的时间是UTC时间，需要转换
+            dt_utc = pytz.utc.localize(dt)
+            dt_utc8 = dt_utc.astimezone(utc8_tz)
+            # 格式化输出为UTC+8时间
+            upload_time = dt_utc8.strftime('%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            # 如果解析失败，保持原格式
+            pass
+    
     return jsonify({
         'success': True,
         'image': {
             'id': image[0],
             'filename': image[1],
             'filepath': relative_path,
-            'upload_time': image[2],
+            'upload_time': upload_time,
             'category': image[3]
         }
     })
+
+# 删除图片API
+@app.route('/api/images/<int:image_id>', methods=['DELETE'])
+def delete_image(image_id):
+    try:
+        # 获取图片信息
+        image = get_image_detail(image_id)
+        if not image:
+            return jsonify({'success': False, 'message': '图片不存在'})
+        
+        # 获取图片路径
+        file_path = image[2]
+        
+        # 删除数据库中的记录
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM images WHERE id = ?", (image_id,))
+        conn.commit()
+        conn.close()
+        
+        # 尝试删除实际文件
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"删除文件失败: {e}")
+                # 文件删除失败不影响数据库删除操作
+        
+        return jsonify({'success': True, 'message': '图片删除成功'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'删除失败: {str(e)}'})
 
 # 提供图片文件服务
 @app.route('/uploads/<path:filename>')
@@ -720,4 +839,5 @@ if __name__ == '__main__':
     if default_category:
         scan_folder_and_update_db(default_category[1], default_category[0])
     
-    app.run(debug=True)
+    # 开放所有IP访问，设置host为0.0.0.0
+    app.run(debug=True, host='0.0.0.0')
