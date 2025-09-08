@@ -326,6 +326,17 @@
         font-size: 14px;
     }
     
+    /* 图片总数提示样式 */
+    .image-count-hint {
+        font-size: 0.8em;
+        color: #666;
+        font-weight: normal;
+        margin-left: 10px;
+        padding: 2px 8px;
+        background-color: #f0f0f0;
+        border-radius: 10px;
+    }
+    
     /* 响应式布局 */
     @media (max-width: 1200px) {
         .masonry-grid {
@@ -362,7 +373,7 @@
 
 {% block content %}
 <div class="category-page">
-    <h2 class="section-title"><i class="fas fa-images"></i> {{ category_name }}</h2>
+    <h2 class="section-title"><i class="fas fa-images"></i> {{ category_name }} <span id="image-count-hint" class="image-count-hint"></span></h2>
     
     <!-- 搜索和视图切换控件 -->
     <div class="view-controls">
@@ -408,25 +419,54 @@
                 </div>
             </div>
         </div>
-        <div id="grid-view" class="grid-view" style="display: none;">
-            <div v-for="image in images" :key="image.id" class="grid-item" :data-upload-time="image.upload_time">
-                <div class="image-card">
-                    <img 
-                        :src="image.filepath" 
-                        :alt="image.filename" 
-                        class="image-thumbnail"
-                        @click="viewImage(image)"
-                        @load="onImageLoad"
-                        @error="onImageError"
-                    >
-                    <div class="image-info">
-                        <div class="image-filename">{{ image.filename }}</div>
-                    </div>
+    </div>
+    
+    <!-- 分页视图容器 -->
+    <div id="grid-view" class="grid-view" style="display: none;">
+        <div v-for="image in images" :key="image.id" class="grid-item" :data-upload-time="image.upload_time">
+            <div class="image-card">
+                <img 
+                    :src="image.filepath" 
+                    :alt="image.filename" 
+                    class="image-thumbnail"
+                    @click="window.app.viewImage(image)"
+                    @load="window.app.onImageLoad"
+                    @error="window.app.onImageError"
+                >
+                <div class="image-info">
+                    <div class="image-filename">{{ image.filename }}</div>
                 </div>
             </div>
         </div>
-    {% endraw %}
     </div>
+    {% endraw %}
+
+    <script>
+        // 为网格视图创建独立的Vue实例
+        document.addEventListener('DOMContentLoaded', function() {
+            // 创建Vue实例并赋值给变量
+            const vm = new Vue({
+                el: '#grid-view',
+                data: {
+                    images: []
+                },
+                mounted: function() {
+                    // 监听主Vue实例的数据变化
+                    const updateGridImages = () => {
+                        if (window.app) {
+                            this.images = window.app.images;
+                        }
+                    };
+                    
+                    // 初始更新
+                    updateGridImages();
+                    
+                    // 定期检查并更新数据
+                    setInterval(updateGridImages, 500);
+                }
+            });
+        });
+    </script>
     
     <!-- 加载指示器 -->
     <div id="loading" class="loading-spinner" style="display: none;">
@@ -457,6 +497,7 @@
         
         <!-- 操作按钮 -->
         <div class="image-viewer-actions">
+            <div id="page-indicator" class="page-indicator">0/0</div>
             <button id="view-details" class="action-btn" onclick="toggleImageDetails(); return false;"><i class="fas fa-info-circle"></i> 详情</button>
             <button id="download-image" class="action-btn" onclick="toggleDownload(); return false;"><i class="fas fa-download"></i> 下载</button>
             <button id="delete-image" class="action-btn delete-btn" onclick="deleteImage(); return false;"><i class="fas fa-trash-alt"></i> 删除</button>
@@ -467,6 +508,16 @@
             <p id="viewer-details"></p>
         </div>
     </div>
+</div>
+
+<!-- 调试面板 -->
+<div id="debug-panel" class="debug-panel">
+    <div class="debug-panel-header">
+        <h3>调试日志</h3>
+        <button id="clear-debug" onclick="window.app.clearDebugLog(); return false;">清除</button>
+        <button id="toggle-debug" onclick="window.app.toggleDebugPanel(); return false;">收起/展开</button>
+    </div>
+    <div id="debug-log" class="debug-log"></div>
 </div>
 {% endblock %}
 
@@ -588,6 +639,20 @@
         z-index: 1001;
     }
     
+    /* 页数指示器样式 */
+    .page-indicator {
+        padding: 12px 24px;
+        border-radius: 30px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 80px;
+        pointer-events: none;
+    }
+    
     .image-viewer:hover .image-viewer-actions {
         opacity: 1;
     }
@@ -651,6 +716,91 @@
         font-size: 14px;
         opacity: 0.9;
     }
+    
+    /* 调试面板样式 */
+    .debug-panel {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 400px;
+        max-height: 300px;
+        background-color: rgba(0, 0, 0, 0.9);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+    
+    .debug-panel-collapsed {
+        max-height: 40px;
+    }
+    
+    .debug-panel-header {
+        padding: 10px 15px;
+        background-color: rgba(40, 40, 40, 0.95);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #444;
+    }
+    
+    .debug-panel-header h3 {
+        margin: 0;
+        color: #fff;
+        font-size: 14px;
+        font-weight: normal;
+    }
+    
+    .debug-panel-header button {
+        background-color: transparent;
+        border: 1px solid #666;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s ease;
+    }
+    
+    .debug-panel-header button:hover {
+        background-color: #444;
+    }
+    
+    .debug-log {
+        padding: 10px;
+        max-height: 240px;
+        overflow-y: auto;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+    
+    .debug-log div {
+        margin-bottom: 5px;
+        color: #ddd;
+    }
+    
+    .debug-log div.debug-info {
+        color: #00ccff;
+    }
+    
+    .debug-log div.debug-warning {
+        color: #ffcc00;
+    }
+    
+    .debug-log div.debug-error {
+        color: #ff6666;
+    }
+    
+    .debug-log div.debug-success {
+        color: #66ff66;
+    }
+    
+    .debug-log div .timestamp {
+        color: #999;
+        margin-right: 8px;
+    }
 </style>
 
 <!-- 主JavaScript文件 -->
@@ -680,7 +830,9 @@
                 isLoadingMore: false,
                 currentBatch: 0, // 当前加载的批次
                 batchSize: 20, // 每批次加载的图片数量
-                currentViewingImageIndex: -1 // 当前查看的图片索引
+                currentViewingImageIndex: -1, // 当前查看的图片索引（保留以兼容旧代码）
+                currentViewingImage: null, // 当前查看的图片对象
+                sortDirection: 'desc' // 排序方向: 'asc' 或 'desc'
             },
             methods: {
                 // 加载图片（初始加载）
@@ -696,7 +848,8 @@
                             page: page,
                             per_page: viewMode === 'grid' ? 20 : this.batchSize, // 瀑布流首次加载一批图片
                             search: search,
-                            view_mode: viewMode
+                            view_mode: viewMode,
+                            sort: this.sortDirection // 将排序方向传递给后端
                         }
                     })
                     .then(response => {
@@ -714,8 +867,10 @@
                         // 瀑布流模式下，添加滚动监听
                         if (this.viewMode === 'waterfall') {
                             this.setupScrollListener();
-                        }
-                    })
+                        // 更新图片总数显示
+                        this.updateImageCountDisplay();
+                    }
+                })
                     .catch(error => {
                         console.error('加载图片失败:', error);
                         alert('加载图片失败，请重试');
@@ -730,26 +885,33 @@
                 loadMoreImages: function() {
                     // 检查是否已经加载了所有图片或者已经在加载中
                     if (this.isLoadingMore || this.images.length >= this.totalCount) {
-                        return;
+                        return Promise.resolve();
                     }
                     
                     this.isLoadingMore = true;
-                    const nextPage = this.currentBatch + 2; // 下一批次
+                    const nextPage = Math.floor(this.images.length / this.batchSize) + 1; // 基于已有图片数量计算下一页
                     
-                    axios.get(`/api/images/${categoryId}`, {
+                    return axios.get(`/api/images/${categoryId}`, {
                         params: {
                             page: nextPage,
                             per_page: this.batchSize,
                             search: this.searchTerm,
-                            view_mode: 'waterfall'
+                            view_mode: 'waterfall',
+                            sort: this.sortDirection // 传递排序参数给懒加载请求
                         }
                     })
                     .then(response => {
                         if (response.data.images && response.data.images.length > 0) {
-                            // 将新图片添加到现有数组中
-                            this.images = [...this.images, ...response.data.images];
-                            this.currentBatch = nextPage - 1;
-                            this.totalCount = response.data.total_count;
+                            // 过滤掉已经存在的图片，避免重复显示
+                            const existingImageIds = new Set(this.images.map(img => img.id));
+                            const newImages = response.data.images.filter(img => !existingImageIds.has(img.id));
+                            
+                            if (newImages.length > 0) {
+                                // 只添加新图片
+                                this.images = [...this.images, ...newImages];
+                                // 确保只显示一个视图
+                                this.updateView();
+                            }
                         }
                     })
                     .catch(error => {
@@ -783,8 +945,8 @@
                 
                 // 查看图片详情
                 viewImage: function(image) {
-                    // 记录当前查看的图片索引
-                    this.currentViewingImageIndex = this.images.findIndex(img => img.id === image.id);
+                    // 记录当前查看的图片对象而非索引，这样更可靠
+                    this.currentViewingImage = image;
                     
                     // 更新图片查看器
                     const imageViewer = document.getElementById('image-viewer');
@@ -796,11 +958,14 @@
                         // 设置图片源和信息
                         viewerImage.src = image.filepath;
                         viewerFilename.textContent = image.filename;
-                        viewerDetails.textContent = `尺寸: ${image.width}x${image.height} | 大小: ${(image.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(image.upload_time).toLocaleString()}`;
+                        viewerDetails.textContent = `尺寸: ${image.width || '未知'}x${image.height || '未知'} | 大小: ${image.size ? (image.size / 1024).toFixed(1) : '未知'}KB | 上传时间: ${image.upload_time ? new Date(image.upload_time).toLocaleString() : '未知'}`;
                         
                         // 显示图片查看器
                         imageViewer.classList.add('active');
                         document.body.style.overflow = 'hidden'; // 防止页面滚动
+                        
+                        // 更新页数指示器
+                        this.updatePageIndicator();
                     }
                 },
                 
@@ -810,125 +975,362 @@
                     if (imageViewer && imageViewer.classList.contains('active')) {
                         imageViewer.classList.remove('active');
                         document.body.style.overflow = ''; // 恢复页面滚动
+                        this.currentViewingImage = null; // 清除当前查看的图片
                     }
                 },
                 
-                // 查看下一张图片
+                // 显示临时提示而不是alert - 优化版本
+                showToast: function(message, duration = 2000) {
+                    // 检查是否已存在toast元素
+                    let toast = document.getElementById('custom-toast');
+                    if (!toast) {
+                        // 创建toast元素
+                        toast = document.createElement('div');
+                        toast.id = 'custom-toast';
+                        toast.style.cssText = `
+                            position: fixed;
+                            top: 20px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background-color: rgba(0, 0, 0, 0.7);
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            z-index: 9999;
+                            opacity: 0;
+                            transition: opacity 0.3s ease;
+                            pointer-events: none;
+                        `;
+                        document.body.appendChild(toast);
+                    }
+                    
+                    // 清除之前的定时器（如果有）
+                    if (toast.timeout) {
+                        clearTimeout(toast.timeout);
+                    }
+                    
+                    // 设置消息并显示
+                    toast.textContent = message;
+                    // 强制重绘
+                    void toast.offsetWidth;
+                    toast.style.opacity = '1';
+                    
+                    // 设置定时器隐藏
+                    toast.timeout = setTimeout(() => {
+                        toast.style.opacity = '0';
+                    }, duration);
+                },
+                
+                // 清除调试日志
+                clearDebugLog: function() {
+                    const debugLog = document.getElementById('debug-log');
+                    if (debugLog) {
+                        debugLog.innerHTML = '';
+                    }
+                },
+                
+                // 切换调试面板显示/隐藏
+                toggleDebugPanel: function() {
+                    const debugPanel = document.getElementById('debug-panel');
+                    if (debugPanel) {
+                        debugPanel.classList.toggle('debug-panel-collapsed');
+                    }
+                },
+                
+                // 添加调试日志到页面面板
+                logDebug: function(message, type = 'info') {
+                    const debugPanel = document.getElementById('debug-panel');
+                    const debugLog = document.getElementById('debug-log');
+                    
+                    if (debugPanel && debugLog) {
+                        const timestamp = new Date().toLocaleTimeString();
+                        const logEntry = document.createElement('div');
+                        logEntry.className = `debug-log-entry debug-${type}`;
+                        logEntry.innerHTML = `[${timestamp}] ${message}`;
+                        
+                        debugLog.appendChild(logEntry);
+                        debugLog.scrollTop = debugLog.scrollHeight; // 滚动到底部
+                    }
+                    
+                    // 同时输出到控制台
+                    if (type === 'error') {
+                        console.error(message);
+                    } else {
+                        console.log(message);
+                    }
+                },
+                
+                // 更新分类图片总数显示
+                updateImageCountDisplay: function() {
+                    const countHint = document.getElementById('image-count-hint');
+                    if (countHint && this.totalCount > 0) {
+                        countHint.textContent = `(${this.totalCount}张图片)`;
+                    }
+                },
+                
+                // 更新页数指示器显示
+                updatePageIndicator: function() {
+                    const pageIndicator = document.getElementById('page-indicator');
+                    if (pageIndicator && this.currentViewingImage && this.images.length > 0) {
+                        // 获取当前图片在数组中的索引（加1使其从1开始）
+                        const currentIndex = this.images.findIndex(img => img.id === this.currentViewingImage.id) + 1;
+                        // 显示当前页/总页数
+                        pageIndicator.textContent = `${currentIndex}/${this.totalCount}`;
+                    }
+                },
+                
+                // 查看下一张图片 - 重构实现，支持自动加载更多
                 viewNextImage: function() {
-                    if (this.currentViewingImageIndex < this.images.length - 1) {
-                        this.currentViewingImageIndex++;
-                        const nextImage = this.images[this.currentViewingImageIndex];
-                        
-                        // 更新图片查看器
-                        const viewerImage = document.getElementById('viewer-image');
-                        const viewerFilename = document.getElementById('viewer-filename');
-                        const viewerDetails = document.getElementById('viewer-details');
-                        
-                        if (viewerImage && viewerFilename && viewerDetails) {
-                            // 重置图片状态（缩放、位置等）
-                            viewerImage.style.transform = 'translate(0, 0) scale(1)';
+                    // 添加调试信息
+                    this.logDebug('viewNextImage called');
+                    this.logDebug(`Current viewing image: ${this.currentViewingImage ? this.currentViewingImage.id : 'none'}`);
+                    this.logDebug(`Images count: ${this.images.length}, Total count: ${this.totalCount}`);
+                    this.logDebug(`Is loading more: ${this.isLoadingMore}`);
+                    
+                    // 防止重复调用
+                    if (this.isLoadingMore || !this.currentViewingImage) {
+                        this.logDebug('Aborted - loading in progress or no current image');
+                        return;
+                    }
+                    
+                    // 获取当前图片在数组中的索引
+                    const currentIndex = this.images.findIndex(img => img.id === this.currentViewingImage.id);
+                    
+                    this.logDebug(`Current image index: ${currentIndex}`);
+                    
+                    if (currentIndex === -1) {
+                        this.showToast('找不到当前图片');
+                        this.logDebug('Current image not found in images array', 'error');
+                        return;
+                    }
+                    
+                    // 计算下一张图片的索引
+                    const nextIndex = currentIndex + 1;
+                    
+                    if (nextIndex < this.images.length) {
+                        // 已加载的图片中还有下一张
+                        this.logDebug(`Loading next image at index: ${nextIndex}, with id: ${this.images[nextIndex].id}`);
+                        this.viewImage(this.images[nextIndex]);
+                        this.updatePageIndicator();
+                    } else if (this.images.length < this.totalCount) {
+                        // 已加载图片用完但还有更多图片未加载
+                        this.showToast('正在加载更多图片...');
+                        this.logDebug(`No more loaded images, loading next batch. Current images length: ${this.images.length}`);
+                        this.loadMoreImages().then(() => {
+                            this.logDebug(`Load more completed. New images length: ${this.images.length}`);
+                            // 加载完成后，再次尝试查找下一张图片
+                            const newCurrentIndex = this.images.findIndex(img => img.id === this.currentViewingImage.id);
+                            this.logDebug(`New current index after load: ${newCurrentIndex}`);
                             
-                            viewerImage.src = nextImage.filepath;
-                            viewerFilename.textContent = nextImage.filename;
-                            viewerDetails.textContent = `尺寸: ${nextImage.width}x${nextImage.height} | 大小: ${(nextImage.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(nextImage.upload_time).toLocaleString()}`;
-                        }
+                            if (newCurrentIndex !== -1) {
+                                if (newCurrentIndex + 1 < this.images.length) {
+                                    this.logDebug(`Loading next image after load at index: ${newCurrentIndex + 1}`);
+                                    this.viewImage(this.images[newCurrentIndex + 1]);
+                                } else {
+                                    this.logDebug('No next image after load, but total count says there should be more', 'error');
+                                    this.showToast('加载更多图片失败，请尝试刷新页面');
+                                }
+                            } else {
+                                this.logDebug('Current image lost after loading more', 'error');
+                                this.showToast('找不到当前图片，请返回图库');
+                            }
+                        });
+                    } else {
+                        // 已达到所有图片的末尾
+                        this.logDebug('Reached end of all images');
+                        this.showToast('已到达最后一张图片');
                     }
                 },
                 
-                // 查看上一张图片
+                // 查看上一张图片 - 重构实现，添加调试日志
                 viewPrevImage: function() {
-                    if (this.currentViewingImageIndex > 0) {
-                        this.currentViewingImageIndex--;
-                        const prevImage = this.images[this.currentViewingImageIndex];
-                        
-                        // 更新图片查看器
-                        const viewerImage = document.getElementById('viewer-image');
-                        const viewerFilename = document.getElementById('viewer-filename');
-                        const viewerDetails = document.getElementById('viewer-details');
-                        
-                        if (viewerImage && viewerFilename && viewerDetails) {
-                            // 重置图片状态（缩放、位置等）
-                            viewerImage.style.transform = 'translate(0, 0) scale(1)';
-                            
-                            viewerImage.src = prevImage.filepath;
-                            viewerFilename.textContent = prevImage.filename;
-                            viewerDetails.textContent = `尺寸: ${prevImage.width}x${prevImage.height} | 大小: ${(prevImage.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(prevImage.upload_time).toLocaleString()}`;
-                        }
+                    // 添加调试信息
+                    this.logDebug('viewPrevImage called');
+                    this.logDebug(`Current viewing image: ${this.currentViewingImage ? this.currentViewingImage.id : 'none'}`);
+                    this.logDebug(`Images count: ${this.images.length}, Total count: ${this.totalCount}`);
+                    this.logDebug(`Is loading more: ${this.isLoadingMore}`);
+                    
+                    // 防止重复调用
+                    if (this.isLoadingMore || !this.currentViewingImage) {
+                        this.logDebug('Aborted - loading in progress or no current image');
+                        return;
                     }
+                    
+                    // 获取当前图片在数组中的索引
+                    const currentIndex = this.images.findIndex(img => img.id === this.currentViewingImage.id);
+                    
+                    this.logDebug(`Current image index: ${currentIndex}`);
+                    
+                    if (currentIndex === -1) {
+                        this.showToast('找不到当前图片');
+                        this.logDebug('Current image not found in images array', 'error');
+                        return;
+                    }
+                    
+                    // 计算上一张图片的索引
+                    const prevIndex = currentIndex - 1;
+                    
+                    if (prevIndex >= 0) {
+                        // 已加载的图片中还有上一张
+                        this.logDebug(`Loading previous image at index: ${prevIndex}, with id: ${this.images[prevIndex].id}`);
+                        this.viewImage(this.images[prevIndex]);
+                        this.updatePageIndicator();
+                    } else {
+                        // 已达到所有图片的开头
+                        this.logDebug('Reached beginning of all images');
+                        this.showToast('已到达第一张图片');
+                    }
+                },
+                
+                // 加载更多图片（仅向数组末尾添加，保持顺序稳定）
+                loadMoreImages: function() {
+                    // 添加调试信息
+                    this.logDebug('loadMoreImages called');
+                    this.logDebug(`Current images length: ${this.images.length}`);
+                    this.logDebug(`Total count: ${this.totalCount}`);
+                    
+                    // 检查是否已经加载了所有图片或者已经在加载中
+                    if (this.isLoadingMore) {
+                        this.logDebug('Already loading more images, aborting');
+                        return Promise.resolve();
+                    }
+                    
+                    if (this.images.length >= this.totalCount) {
+                        this.logDebug('All images already loaded');
+                        return Promise.resolve();
+                    }
+                    
+                    this.isLoadingMore = true;
+                    const nextPage = Math.floor(this.images.length / this.batchSize) + 1; // 基于已有图片数量计算下一页
+                    
+                    this.logDebug(`Loading page: ${nextPage} with batch size: ${this.batchSize}`);
+                    
+                    return axios.get(`/api/images/${categoryId}`, {
+                        params: {
+                            page: nextPage,
+                            per_page: this.batchSize,
+                            search: this.searchTerm,
+                            view_mode: 'waterfall',
+                            sort: this.sortDirection // 传递排序参数给懒加载请求
+                        }
+                    })
+                    .then(response => {
+                        this.logDebug(`API response received. Status: ${response.status}`);
+                        this.logDebug(`Response data images count: ${response.data.images ? response.data.images.length : 0}`);
+                        
+                        if (response.data.images && response.data.images.length > 0) {
+                            // 过滤掉已经存在的图片，避免重复显示
+                            const existingImageIds = new Set(this.images.map(img => img.id));
+                            const newImages = response.data.images.filter(img => !existingImageIds.has(img.id));
+                            
+                            this.logDebug(`Filtered new images count: ${newImages.length}`);
+                            
+                            if (newImages.length > 0) {
+                                // 记录添加前的最后一个ID
+                                const lastIdBefore = this.images.length > 0 ? this.images[this.images.length - 1].id : 'none';
+                                // 只添加新图片到数组末尾，保持图片顺序稳定
+                                this.images = [...this.images, ...newImages];
+                                // 记录添加后的最后一个ID
+                                const lastIdAfter = this.images[this.images.length - 1].id;
+                                
+                                this.logDebug(`Images array updated. Before: ${this.images.length - newImages.length}, After: ${this.images.length}`);
+                                this.logDebug(`Last ID before: ${lastIdBefore}, Last ID after: ${lastIdAfter}`);
+                                
+                                // 确保只显示一个视图
+                                this.updateView();
+                            } else {
+                                this.logDebug('No new images found in response');
+                            }
+                        } else {
+                            this.logDebug('No images in response');
+                        }
+                    })
+                    .catch(error => {
+                        this.logDebug(`加载更多图片失败: ${error}`, 'error');
+                        if (error.response) {
+                            this.logDebug(`Response status: ${error.response.status}`, 'error');
+                            this.logDebug(`Response data: ${JSON.stringify(error.response.data)}`, 'error');
+                        }
+                    })
+                    .finally(() => {
+                        this.logDebug('Load more completed, resetting isLoadingMore');
+                        this.isLoadingMore = false;
+                    });
                 },
                 
 
                 
-                // 删除图片
+                // 删除图片 - 统一使用currentViewingImage对象
                 deleteCurrentImage: function() {
-                    console.log('deleteCurrentImage called');
-                    if (this.currentViewingImageIndex >= 0 && this.images[this.currentViewingImageIndex]) {
-                        // 使用自定义的确认对话框替代浏览器默认的confirm
-                        if (this.customConfirm('确定要删除这张图片吗？此操作不可恢复。')) {
-                            const currentImage = this.images[this.currentViewingImageIndex];
-                            
-                            // 调用API删除图片
-                            axios.delete(`/api/images/${currentImage.id}`)
-                                .then(response => {
-                                    this.customAlert('图片删除成功');
-                                    // 从数组中移除图片
-                                    this.images.splice(this.currentViewingImageIndex, 1);
-                                    
-                                    // 如果还有图片，显示下一张或上一张
-                                    if (this.images.length > 0) {
-                                        // 如果删除的是最后一张，显示上一张
-                                        if (this.currentViewingImageIndex >= this.images.length) {
-                                            this.currentViewingImageIndex = this.images.length - 1;
-                                        }
-                                        
-                                        const newImage = this.images[this.currentViewingImageIndex];
-                                        
-                                        // 更新图片查看器
-                                        const viewerImage = document.getElementById('viewer-image');
-                                        const viewerFilename = document.getElementById('viewer-filename');
-                                        const viewerDetails = document.getElementById('viewer-details');
-                                        
-                                        if (viewerImage && viewerFilename && viewerDetails) {
-                                            viewerImage.src = newImage.filepath;
-                                            viewerFilename.textContent = newImage.filename;
-                                            viewerDetails.textContent = `尺寸: ${newImage.width}x${newImage.height} | 大小: ${(newImage.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(newImage.upload_time).toLocaleString()}`;
-                                        }
-                                    } else {
-                                        // 如果没有图片了，关闭查看器
-                                        this.closeImageViewer();
-                                        // 重新加载页面数据
-                                        this.loadImages();
+                    if (!this.currentViewingImage) return;
+                    
+                    // 使用浏览器默认的confirm
+                    if (confirm('确定要删除这张图片吗？此操作不可恢复。')) {
+                        const currentImage = this.currentViewingImage;
+                        
+                        // 调用API删除图片
+                        axios.delete(`/api/images/${currentImage.id}`)
+                            .then(response => {
+                                this.showToast('图片删除成功');
+                                
+                                // 获取当前图片在数组中的索引
+                                const currentIndex = this.images.findIndex(img => img.id === currentImage.id);
+                                
+                                // 从数组中移除图片
+                                if (currentIndex !== -1) {
+                                    this.images.splice(currentIndex, 1);
+                                }
+                                
+                                // 如果还有图片，显示下一张或上一张
+                                if (this.images.length > 0) {
+                                    // 决定显示下一张还是上一张
+                                    let newImage;
+                                    if (currentIndex < this.images.length) {
+                                        // 如果不是最后一张，显示原来位置的图片
+                                        newImage = this.images[currentIndex];
+                                    } else if (this.images.length > 0) {
+                                        // 如果是最后一张，显示上一张
+                                        newImage = this.images[this.images.length - 1];
                                     }
-                                })
-                                .catch(error => {
-                                    console.error('删除图片失败:', error);
-                                    this.customAlert('删除图片失败，请重试。');
-                                });
-                        }
+                                    
+                                    if (newImage) {
+                                        this.viewImage(newImage);
+                                    }
+                                } else {
+                                    // 如果没有图片了，关闭查看器
+                                    this.closeImageViewer();
+                                    // 重新加载页面数据
+                                    this.loadImages();
+                                }
+                            })
+                            .catch(error => {
+                                console.error('删除图片失败:', error);
+                                this.showToast('删除图片失败，请重试。');
+                            });
                     }
                 },
                 
 
                 
-                // 下载图片
+                // 下载图片 - 统一使用currentViewingImage对象
                 downloadCurrentImage: function() {
-                    if (this.currentViewingImageIndex >= 0 && this.images[this.currentViewingImageIndex]) {
-                        const currentImage = this.images[this.currentViewingImageIndex];
-                        const imageUrl = currentImage.filepath;
-                        const filename = currentImage.filename;
-                        
-                        // 创建临时链接并触发下载
-                        const link = document.createElement('a');
-                        link.href = imageUrl;
-                        link.download = filename;
-                        
-                        // 触发点击事件
-                        document.body.appendChild(link);
-                        link.click();
-                        
-                        // 清理
-                        document.body.removeChild(link);
-                    }
+                    if (!this.currentViewingImage) return;
+                    
+                    const currentImage = this.currentViewingImage;
+                    const imageUrl = currentImage.filepath;
+                    const filename = currentImage.filename;
+                    
+                    // 创建临时链接并触发下载
+                    const link = document.createElement('a');
+                    link.href = imageUrl;
+                    link.download = filename;
+                    
+                    // 触发点击事件
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // 清理
+                    document.body.removeChild(link);
                 },
                 
                 // 图片加载完成事件
@@ -1054,6 +1456,25 @@
                     }
                 });
                 
+                // 绑定排序按钮事件
+                document.getElementById('sort-asc-btn').addEventListener('click', () => {
+                    this.sortDirection = 'asc';
+                    this.loadImages(1, this.searchTerm, this.viewMode);
+                    
+                    // 更新排序按钮状态
+                    document.getElementById('sort-asc-btn').classList.add('active');
+                    document.getElementById('sort-desc-btn').classList.remove('active');
+                });
+                
+                document.getElementById('sort-desc-btn').addEventListener('click', () => {
+                    this.sortDirection = 'desc';
+                    this.loadImages(1, this.searchTerm, this.viewMode);
+                    
+                    // 更新排序按钮状态
+                    document.getElementById('sort-desc-btn').classList.add('active');
+                    document.getElementById('sort-asc-btn').classList.remove('active');
+                });
+                
                 // 绑定图片查看器关闭事件
                 document.getElementById('image-viewer').addEventListener('click', (e) => {
                     // 检查点击目标是否是查看器背景、关闭按钮或关闭图标
@@ -1070,7 +1491,111 @@
                     if (e.key === 'Escape') {
                         this.closeImageViewer();
                     }
+                    // 左右箭头键切换图片 - 不依赖按钮状态
+                    else if (e.key === 'ArrowLeft') {
+                        this.viewPrevImage();
+                        hideViewerButtons();
+                    }
+                    else if (e.key === 'ArrowRight') {
+                        this.viewNextImage();
+                        hideViewerButtons();
+                    }
+                    // Delete键删除图片
+                    else if (e.key === 'Delete') {
+                        const deleteBtn = document.getElementById('delete-image');
+                        if (deleteBtn && !deleteBtn.disabled) {
+                            deleteBtn.click();
+                            hideViewerButtons();
+                        }
+                    }
+                    // 其他键盘事件也隐藏按钮
+                    else if (e.key !== 'Shift' && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Meta') {
+                        hideViewerButtons();
+                    }
                 });
+                
+                // 绑定上一页/下一页按钮点击事件
+                // 首先移除可能存在的事件监听器，然后重新添加
+                const prevImageBtn = document.getElementById('prev-image');
+                const nextImageBtn = document.getElementById('next-image');
+                
+                // 临时函数，用于移除旧的事件监听器（如果有）
+                const removeOldListeners = () => {
+                    try {
+                        const clonedPrevBtn = prevImageBtn.cloneNode(true);
+                        prevImageBtn.parentNode.replaceChild(clonedPrevBtn, prevImageBtn);
+                        const clonedNextBtn = nextImageBtn.cloneNode(true);
+                        nextImageBtn.parentNode.replaceChild(clonedNextBtn, nextImageBtn);
+                        return { prevBtn: clonedPrevBtn, nextBtn: clonedNextBtn };
+                    } catch (e) {
+                        return { prevBtn: prevImageBtn, nextBtn: nextImageBtn };
+                    }
+                };
+                
+                const { prevBtn, nextBtn } = removeOldListeners();
+                
+                prevBtn.addEventListener('click', (e) => {
+                    e.stopImmediatePropagation(); // 阻止事件冒泡和同一元素上的其他事件监听器
+                    e.preventDefault();
+                    this.viewPrevImage();
+                });
+                
+                nextBtn.addEventListener('click', (e) => {
+                    e.stopImmediatePropagation(); // 阻止事件冒泡和同一元素上的其他事件监听器
+                    e.preventDefault();
+                    this.viewNextImage();
+                });
+                
+                // 隐藏查看器按钮的函数
+                function hideViewerButtons() {
+                    const imageViewer = document.getElementById('image-viewer');
+                    if (!imageViewer || !imageViewer.classList.contains('active')) return;
+                    
+                    const navBtns = document.querySelectorAll('.nav-btn');
+                    const actionBtns = document.querySelector('.image-viewer-actions');
+                    const closeBtn = document.querySelector('.close-btn');
+                    
+                    // 隐藏所有按钮
+                    navBtns.forEach(btn => btn.style.opacity = '0');
+                    if (actionBtns) actionBtns.style.opacity = '0';
+                    if (closeBtn) closeBtn.style.opacity = '0';
+                    
+                    // 设置定时器，在1秒后重新显示按钮（如果鼠标没有悬停）
+                    setTimeout(() => {
+                        // 检查鼠标是否悬停在查看器上或任何按钮上
+                        const isViewerHovered = imageViewer.classList.contains('mouse-hovered');
+                        const isBtnHovered = [...navBtns].some(btn => btn.matches(':hover'));
+                        const isActionBtnsHovered = actionBtns && actionBtns.matches(':hover');
+                        const isCloseBtnHovered = closeBtn && closeBtn.matches(':hover');
+                        
+                        // 只有当鼠标没有悬停在查看器或任何按钮上时，才重新显示按钮
+                        if (!isViewerHovered && !isBtnHovered && !isActionBtnsHovered && !isCloseBtnHovered) {
+                            navBtns.forEach(btn => btn.style.opacity = '');
+                            if (actionBtns) actionBtns.style.opacity = '';
+                            if (closeBtn) closeBtn.style.opacity = '';
+                        }
+                    }, 1000);
+                }
+                
+                // 添加鼠标悬停状态检测
+                const imageViewer = document.getElementById('image-viewer');
+                if (imageViewer) {
+                    imageViewer.addEventListener('mouseenter', () => {
+                        imageViewer.classList.add('mouse-hovered');
+                        // 立即显示所有按钮
+                        const navBtns = document.querySelectorAll('.nav-btn');
+                        const actionBtns = document.querySelector('.image-viewer-actions');
+                        const closeBtn = document.querySelector('.close-btn');
+                        
+                        navBtns.forEach(btn => btn.style.opacity = '');
+                        if (actionBtns) actionBtns.style.opacity = '';
+                        if (closeBtn) closeBtn.style.opacity = '';
+                    });
+                    
+                    imageViewer.addEventListener('mouseleave', () => {
+                        imageViewer.classList.remove('mouse-hovered');
+                    });
+                }
                 
 
                 
@@ -1166,52 +1691,11 @@ function toggleImageDetails() {
         return false;
     };
     
-    // 全局函数：删除图片
+    // 全局函数：删除图片 - 简化版本，直接调用Vue实例方法
     function deleteImage() {
         console.log('deleteImage called');
-        if (window.app && window.app.currentViewingImageIndex >= 0 && window.app.images[window.app.currentViewingImageIndex]) {
-            // 使用原生confirm对话框，确保最简单可靠的行为
-            if (confirm('确定要删除这张图片吗？此操作不可恢复。')) {
-                const currentImage = window.app.images[window.app.currentViewingImageIndex];
-                
-                // 调用API删除图片
-                axios.delete(`/api/images/${currentImage.id}`)
-                    .then(response => {
-                        alert('图片删除成功');
-                        // 从数组中移除图片
-                        window.app.images.splice(window.app.currentViewingImageIndex, 1);
-                        
-                        // 如果还有图片，显示下一张或上一张
-                        if (window.app.images.length > 0) {
-                            // 如果删除的是最后一张，显示上一张
-                            if (window.app.currentViewingImageIndex >= window.app.images.length) {
-                                window.app.currentViewingImageIndex = window.app.images.length - 1;
-                            }
-                            
-                            const newImage = window.app.images[window.app.currentViewingImageIndex];
-                            
-                            // 更新图片查看器
-                            const viewerImage = document.getElementById('viewer-image');
-                            const viewerFilename = document.getElementById('viewer-filename');
-                            const viewerDetails = document.getElementById('viewer-details');
-                            
-                            if (viewerImage && viewerFilename && viewerDetails) {
-                                viewerImage.src = newImage.filepath;
-                                viewerFilename.textContent = newImage.filename;
-                                viewerDetails.textContent = `尺寸: ${newImage.width}x${newImage.height} | 大小: ${(newImage.size / 1024).toFixed(1)}KB | 上传时间: ${new Date(newImage.upload_time).toLocaleString()}`;
-                            }
-                        } else {
-                            // 如果没有图片了，关闭查看器
-                            window.app.closeImageViewer();
-                            // 重新加载页面数据
-                            window.app.loadImages();
-                        }
-                    })
-                    .catch(error => {
-                        console.error('删除图片失败:', error);
-                        alert('删除图片失败，请重试。');
-                    });
-            }
+        if (window.app && typeof window.app.deleteCurrentImage === 'function') {
+            window.app.deleteCurrentImage();
         }
         return false;
     }

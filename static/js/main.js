@@ -578,9 +578,8 @@ function initCategoryPage() {
         });
     });
     
-    // 排序功能逻辑
+    // 排序功能逻辑（现在排序在后端完成，保留UI按钮）
     const sortButtons = document.querySelectorAll('.sort-btn');
-    let currentSort = 'desc'; // 默认倒序
     
     // 确保只在DOM元素加载完成后添加事件监听器
     if (sortButtons.length > 0) {
@@ -589,76 +588,14 @@ function initCategoryPage() {
                 // 更新按钮状态
                 sortButtons.forEach(btn => btn.classList.remove('active'));
                 this.classList.add('active');
-                currentSort = this.dataset.sort;
                 
                 // 添加点击动画
                 this.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     this.style.transform = 'scale(1)';
                 }, 200);
-                
-                // 排序图片
-                sortImagesByTime(currentSort);
             });
         });
-    }
-    
-    // 按时间排序图片的函数
-    function sortImagesByTime(sortOrder) {
-        // 获取当前活动的视图容器
-        const activeViewMode = document.getElementById('waterfall-btn').classList.contains('active') ? 'waterfall' : 'grid';
-        const imagesContainer = activeViewMode === 'waterfall' ? 
-            document.getElementById('masonry-grid') : 
-            document.getElementById('grid-view');
-        
-        if (!imagesContainer) {
-            console.log('未找到图片容器');
-            return;
-        }
-        
-        // 获取所有图片项
-        const imageItems = Array.from(imagesContainer.querySelectorAll('[data-upload-time]'));
-        
-        if (imageItems.length === 0) {
-            console.log('未找到带上传时间的图片项');
-            return;
-        }
-        
-        // 根据data-upload-time属性排序
-        imageItems.sort((a, b) => {
-            try {
-                const timeA = new Date(a.dataset.uploadTime).getTime();
-                const timeB = new Date(b.dataset.uploadTime).getTime();
-                return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
-            } catch (error) {
-                console.error('排序错误:', error);
-                return 0;
-            }
-        });
-        
-        // 清空容器并重新添加排序后的图片
-        // 添加淡入效果
-        imageItems.forEach(item => {
-            item.style.opacity = '0';
-            item.style.transition = 'opacity 0.3s ease';
-        });
-        
-        // 延迟一点时间再重新添加图片以增强视觉效果
-        setTimeout(() => {
-            // 清空容器
-            while (imagesContainer.firstChild) {
-                imagesContainer.removeChild(imagesContainer.firstChild);
-            }
-            
-            // 重新添加排序后的图片
-            imageItems.forEach((item, index) => {
-                // 设置一点延迟以创建级联效果
-                setTimeout(() => {
-                    imagesContainer.appendChild(item);
-                    item.style.opacity = '1';
-                }, index * 30);
-            });
-        }, 200);
     }
 }
 

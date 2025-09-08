@@ -60,6 +60,7 @@ def init_db():
             filepath TEXT NOT NULL,
             category_id INTEGER,
             upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            sort_index INTEGER,
             FOREIGN KEY (category_id) REFERENCES categories (id)
         )
     ''')
@@ -99,27 +100,30 @@ def get_categories():
     return categories
 
 # 获取指定分类的图片
-def get_images_by_category(category_id, page=1, per_page=20, search_term=''):
+def get_images_by_category(category_id, page=1, per_page=20, search_term='', sort_direction='desc'):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     
     offset = (page - 1) * per_page
     
+    # 根据排序方向决定ORDER BY子句
+    order_by = "ORDER BY sort_index ASC" if sort_direction == 'asc' else "ORDER BY sort_index DESC"
+    
     if search_term:
-        query = """
-            SELECT id, filename, filepath, upload_time 
+        query = f"""
+            SELECT id, filename, filepath, upload_time, sort_index
             FROM images 
             WHERE category_id = ? AND filename LIKE ? 
-            ORDER BY upload_time DESC 
+            {order_by} 
             LIMIT ? OFFSET ?
         """
         cursor.execute(query, (category_id, f'%{search_term}%', per_page, offset))
     else:
-        query = """
-            SELECT id, filename, filepath, upload_time 
+        query = f"""
+            SELECT id, filename, filepath, upload_time, sort_index
             FROM images 
             WHERE category_id = ? 
-            ORDER BY upload_time DESC 
+            {order_by} 
             LIMIT ? OFFSET ?
         """
         cursor.execute(query, (category_id, per_page, offset))
@@ -158,6 +162,37 @@ def get_image_detail(image_id):
     conn.close()
     return image
 
+# 为指定分类的图片更新排序索引
+def update_sort_index_for_category(category_id, cursor=None, conn=None):
+    # 如果没有提供连接和游标，创建新的
+    if conn is None or cursor is None:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        need_commit = True
+    else:
+        need_commit = False
+    
+    # 按upload_time降序获取该分类的所有图片
+    cursor.execute("""
+        SELECT id FROM images 
+        WHERE category_id = ? 
+        ORDER BY upload_time DESC
+    """, (category_id,))
+    
+    images = cursor.fetchall()
+    
+    # 更新每张图片的sort_index
+    for index, (image_id,) in enumerate(images, 1):
+        cursor.execute(
+            "UPDATE images SET sort_index = ? WHERE id = ?",
+            (index, image_id)
+        )
+    
+    # 只有在需要时才提交和关闭连接
+    if need_commit:
+        conn.commit()
+        conn.close()
+
 # 扫描文件夹并更新数据库
 def scan_folder_and_update_db(folder_path, category_id, cursor=None, conn=None):
     # 如果没有提供连接和游标，创建新的
@@ -192,6 +227,9 @@ def scan_folder_and_update_db(folder_path, category_id, cursor=None, conn=None):
         if file_path not in folder_files:
             cursor.execute("DELETE FROM images WHERE filepath = ?", (file_path,))
     
+    # 更新排序索引
+    update_sort_index_for_category(category_id, cursor, conn)
+    
     # 只有在需要时才提交和关闭连接
     if need_commit:
         conn.commit()
@@ -225,6 +263,9 @@ def upload_image():
         uploaded_count = 0
         
         # 保存上传的文件
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        
         for file in files:
             if file and allowed_file(file.filename):
                 # 生成唯一文件名
@@ -243,17 +284,19 @@ def upload_image():
                 file.save(filepath)
                 
                 # 更新数据库
-                conn = sqlite3.connect(DATABASE)
-                cursor = conn.cursor()
                 cursor.execute(
                     "INSERT INTO images (filename, filepath, category_id) VALUES (?, ?, ?)",
                     (filename, filepath, category_id)
                 )
-                conn.commit()
-                conn.close()
                 
                 uploaded_count += 1
                 
+        conn.commit()
+        conn.close()
+        
+        # 更新该分类的排序索引
+        update_sort_index_for_category(category_id)
+        
         if uploaded_count == 0:
             return jsonify({'success': False, 'message': '没有有效的图片文件被上传'})
             
@@ -327,7 +370,8 @@ def get_category_images(category_id):
                     'id': img[0],
                     'filename': img[1],
                     'filepath': image_url,
-                    'upload_time': upload_time
+                    'upload_time': upload_time,
+                    'sort_index': img[4]  # 添加sort_index字段
                 })
             
         return jsonify({
@@ -608,8 +652,9 @@ def api_images(category_id):
     per_page = request.args.get('per_page', 20, type=int)
     search_term = request.args.get('search', '', type=str)
     view_mode = request.args.get('view_mode', 'waterfall', type=str)
+    sort_direction = request.args.get('sort', 'desc', type=str)  # 默认为降序
     
-    result = get_images_by_category(category_id, page, per_page, search_term)
+    result = get_images_by_category(category_id, page, per_page, search_term, sort_direction)
     
     # 格式化图片数据
     formatted_images = []
