@@ -24,8 +24,13 @@
                 <nav class="nav">
                     <ul>
                         <li><a href="/" class="nav-link"><i class="fas fa-home"></i> 首页</a></li>
-                        {% if not session.admin_logged_in %}
+                        
+                        {% if not session.user_logged_in and not session.admin_logged_in %}
+                        <li><a href="/user/login" class="nav-link"><i class="fas fa-user"></i> 用户登录</a></li>
                         <li><a href="/admin/login" class="nav-link"><i class="fas fa-user-shield"></i> 管理员登录</a></li>
+                        {% elif session.user_logged_in %}
+                        <li><a href="#" class="nav-link"><i class="fas fa-user-circle"></i> {{ session.user_username }}</a></li>
+                        <li><a href="/user/logout" class="nav-link"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
                         {% else %}
                         <li><a href="/admin/dashboard" class="nav-link"><i class="fas fa-tachometer-alt"></i> 管理面板</a></li>
                         <li><a href="/admin/logout" class="nav-link"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
@@ -39,19 +44,16 @@
     <main class="main">
         <div class="container">
             {% block content %}{% endblock %}
-        </div>
-    </main>
-
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
+            
+            <!-- 版权信息 -->
+            <div class="copyright-content">
                 <p>&copy; <span id="current-year">2025</span> Yoy版权所有</p>
                 <script>
                     document.getElementById('current-year').textContent = new Date().getFullYear();
                 </script>
             </div>
         </div>
-    </footer>
+    </main>
 
     {% block scripts %}{% endblock %}
 </body>

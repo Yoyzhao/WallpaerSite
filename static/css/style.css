@@ -114,6 +114,8 @@ div {
     /* 确保main元素有独立的样式，不与内部div共用 */
     width: 100%;
     box-sizing: border-box;
+    /* 强制背景图片不透明显示 */
+    opacity: 1 !important;
 }
 
 /* 主内容区内部容器样式 */
@@ -150,7 +152,8 @@ div {
 .section-title {
     font-size: 28px;
     margin-bottom: 20px;
-    color: #333;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -158,18 +161,22 @@ div {
 
 .categories-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    padding: 15px;
+    background: transparent;
+    opacity: 0.8;
+    border-radius: 8px;
 }
 
 .category-card {
-    background: white;
-    border-radius: 8px;
+    background: transparent;
+    border-radius: 6px;
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     text-align: center;
-    padding: 30px 20px;
+    padding: 20px 15px;
 }
 
 .category-card.hover {
@@ -181,6 +188,32 @@ div {
     text-decoration: none;
     color: #333;
     display: block;
+    opacity: 1;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.category-link:hover {
+    transform: translateY(-2px);
+    color: #007bff;
+}
+
+.category-link:hover .category-icon {
+    transform: scale(1.1);
+}
+
+.category-link:hover .category-name {
+    text-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.category-link:active {
+    transform: translateY(0);
+}
+
+.category-link:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 4px;
+    border-radius: 8px;
 }
 
 .category-icon {
@@ -189,23 +222,107 @@ div {
     color: #007bff;
 }
 
+.category-icon i {
+    opacity: 1;
+}
+
 .category-name {
     font-size: 18px;
     font-weight: 600;
+    opacity: 1;
+    color: #fff;
+}
+
+/* CSS变量 - 统一样式定义 */
+:root {
+    --transparent-bg: rgba(255, 255, 255, 0.2);
+    --transparent-bg-hover: rgba(255, 255, 255, 0.3);
+    --border-color: rgba(255, 255, 255, 0.3);
+    --border-color-hover: rgba(255, 255, 255, 0.5);
+    --border-radius: 12px;
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --box-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.15);
+    --box-shadow-active: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+    --text-color: #fff;
+}
+
+/* 关于网站按钮样式 */
+.about-button {
+    background: var(--transparent-bg);
+    backdrop-filter: blur(10px);
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--text-color);
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 120px;
+    position: fixed;
+    right: 20px;
+    bottom: 80px;
+    box-shadow: var(--box-shadow);
+    z-index: 999;
+}
+
+.about-button:hover {
+    background: var(--transparent-bg-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.about-button:active {
+    transform: translateY(0);
+    box-shadow: var(--box-shadow-active);
 }
 
 /* 关于部分样式 */
 .about-section {
-    background: white;
+    background: var(--transparent-bg);
+    backdrop-filter: blur(10px);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
     padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    right: 20px;
+    bottom: 80px;
+    width: 400px;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    z-index: 998;
+}
+
+.about-section:hover {
+    background: var(--transparent-bg-hover);
+    border-color: var(--border-color-hover);
+    box-shadow: var(--box-shadow-hover);
+}
+
+/* 版权信息样式 */
+.copyright-content {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.5); /* 半透明背景 */
+    color: white;
+    text-align: center;
+    width: 100%;
+    z-index: 1000; /* 确保在其他内容之上 */
 }
 
 .about-content h2 {
     font-size: 24px;
     margin-bottom: 15px;
-    color: #333;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -214,6 +331,8 @@ div {
 .about-content p {
     margin-bottom: 10px;
     line-height: 1.8;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 /* 图片加载动画 */
