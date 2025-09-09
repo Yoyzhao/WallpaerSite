@@ -542,7 +542,7 @@ function initCategoryPage() {
                         selectedImages.add(this.src);
                     }
                     
-                    console.log('选中的图片数量:', selectedImages.size);
+
                 }
             });
         });

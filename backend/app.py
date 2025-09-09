@@ -885,4 +885,4 @@ if __name__ == '__main__':
         scan_folder_and_update_db(default_category[1], default_category[0])
     
     # 开放所有IP访问，设置host为0.0.0.0
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=False, host='0.0.0.0')

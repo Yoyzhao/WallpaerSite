@@ -510,15 +510,7 @@
     </div>
 </div>
 
-<!-- 调试面板 -->
-<div id="debug-panel" class="debug-panel">
-    <div class="debug-panel-header">
-        <h3>调试日志</h3>
-        <button id="clear-debug" onclick="window.app.clearDebugLog(); return false;">清除</button>
-        <button id="toggle-debug" onclick="window.app.toggleDebugPanel(); return false;">收起/展开</button>
-    </div>
-    <div id="debug-log" class="debug-log"></div>
-</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -717,90 +709,7 @@
         opacity: 0.9;
     }
     
-    /* 调试面板样式 */
-    .debug-panel {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 400px;
-        max-height: 300px;
-        background-color: rgba(0, 0, 0, 0.9);
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        z-index: 10000;
-        overflow: hidden;
-        transition: max-height 0.3s ease;
-    }
-    
-    .debug-panel-collapsed {
-        max-height: 40px;
-    }
-    
-    .debug-panel-header {
-        padding: 10px 15px;
-        background-color: rgba(40, 40, 40, 0.95);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #444;
-    }
-    
-    .debug-panel-header h3 {
-        margin: 0;
-        color: #fff;
-        font-size: 14px;
-        font-weight: normal;
-    }
-    
-    .debug-panel-header button {
-        background-color: transparent;
-        border: 1px solid #666;
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: all 0.2s ease;
-    }
-    
-    .debug-panel-header button:hover {
-        background-color: #444;
-    }
-    
-    .debug-log {
-        padding: 10px;
-        max-height: 240px;
-        overflow-y: auto;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 12px;
-        line-height: 1.4;
-    }
-    
-    .debug-log div {
-        margin-bottom: 5px;
-        color: #ddd;
-    }
-    
-    .debug-log div.debug-info {
-        color: #00ccff;
-    }
-    
-    .debug-log div.debug-warning {
-        color: #ffcc00;
-    }
-    
-    .debug-log div.debug-error {
-        color: #ff6666;
-    }
-    
-    .debug-log div.debug-success {
-        color: #66ff66;
-    }
-    
-    .debug-log div .timestamp {
-        color: #999;
-        margin-right: 8px;
-    }
+
 </style>
 
 <!-- 主JavaScript文件 -->
@@ -867,9 +776,9 @@
                         // 瀑布流模式下，添加滚动监听
                         if (this.viewMode === 'waterfall') {
                             this.setupScrollListener();
+                        }
                         // 更新图片总数显示
                         this.updateImageCountDisplay();
-                    }
                 })
                     .catch(error => {
                         console.error('加载图片失败:', error);
@@ -1021,44 +930,7 @@
                     }, duration);
                 },
                 
-                // 清除调试日志
-                clearDebugLog: function() {
-                    const debugLog = document.getElementById('debug-log');
-                    if (debugLog) {
-                        debugLog.innerHTML = '';
-                    }
-                },
-                
-                // 切换调试面板显示/隐藏
-                toggleDebugPanel: function() {
-                    const debugPanel = document.getElementById('debug-panel');
-                    if (debugPanel) {
-                        debugPanel.classList.toggle('debug-panel-collapsed');
-                    }
-                },
-                
-                // 添加调试日志到页面面板
-                logDebug: function(message, type = 'info') {
-                    const debugPanel = document.getElementById('debug-panel');
-                    const debugLog = document.getElementById('debug-log');
-                    
-                    if (debugPanel && debugLog) {
-                        const timestamp = new Date().toLocaleTimeString();
-                        const logEntry = document.createElement('div');
-                        logEntry.className = `debug-log-entry debug-${type}`;
-                        logEntry.innerHTML = `[${timestamp}] ${message}`;
-                        
-                        debugLog.appendChild(logEntry);
-                        debugLog.scrollTop = debugLog.scrollHeight; // 滚动到底部
-                    }
-                    
-                    // 同时输出到控制台
-                    if (type === 'error') {
-                        console.error(message);
-                    } else {
-                        console.log(message);
-                    }
-                },
+
                 
                 // 更新分类图片总数显示
                 updateImageCountDisplay: function() {
@@ -1081,26 +953,16 @@
                 
                 // 查看下一张图片 - 重构实现，支持自动加载更多
                 viewNextImage: function() {
-                    // 添加调试信息
-                    this.logDebug('viewNextImage called');
-                    this.logDebug(`Current viewing image: ${this.currentViewingImage ? this.currentViewingImage.id : 'none'}`);
-                    this.logDebug(`Images count: ${this.images.length}, Total count: ${this.totalCount}`);
-                    this.logDebug(`Is loading more: ${this.isLoadingMore}`);
-                    
                     // 防止重复调用
                     if (this.isLoadingMore || !this.currentViewingImage) {
-                        this.logDebug('Aborted - loading in progress or no current image');
                         return;
                     }
                     
                     // 获取当前图片在数组中的索引
                     const currentIndex = this.images.findIndex(img => img.id === this.currentViewingImage.id);
                     
-                    this.logDebug(`Current image index: ${currentIndex}`);
-                    
                     if (currentIndex === -1) {
                         this.showToast('找不到当前图片');
-                        this.logDebug('Current image not found in images array', 'error');
                         return;
                     }
                     
@@ -1109,61 +971,43 @@
                     
                     if (nextIndex < this.images.length) {
                         // 已加载的图片中还有下一张
-                        this.logDebug(`Loading next image at index: ${nextIndex}, with id: ${this.images[nextIndex].id}`);
                         this.viewImage(this.images[nextIndex]);
                         this.updatePageIndicator();
                     } else if (this.images.length < this.totalCount) {
                         // 已加载图片用完但还有更多图片未加载
                         this.showToast('正在加载更多图片...');
-                        this.logDebug(`No more loaded images, loading next batch. Current images length: ${this.images.length}`);
                         this.loadMoreImages().then(() => {
-                            this.logDebug(`Load more completed. New images length: ${this.images.length}`);
                             // 加载完成后，再次尝试查找下一张图片
                             const newCurrentIndex = this.images.findIndex(img => img.id === this.currentViewingImage.id);
-                            this.logDebug(`New current index after load: ${newCurrentIndex}`);
                             
                             if (newCurrentIndex !== -1) {
                                 if (newCurrentIndex + 1 < this.images.length) {
-                                    this.logDebug(`Loading next image after load at index: ${newCurrentIndex + 1}`);
                                     this.viewImage(this.images[newCurrentIndex + 1]);
                                 } else {
-                                    this.logDebug('No next image after load, but total count says there should be more', 'error');
                                     this.showToast('加载更多图片失败，请尝试刷新页面');
                                 }
                             } else {
-                                this.logDebug('Current image lost after loading more', 'error');
                                 this.showToast('找不到当前图片，请返回图库');
                             }
                         });
                     } else {
                         // 已达到所有图片的末尾
-                        this.logDebug('Reached end of all images');
                         this.showToast('已到达最后一张图片');
                     }
                 },
                 
-                // 查看上一张图片 - 重构实现，添加调试日志
+                // 查看上一张图片
                 viewPrevImage: function() {
-                    // 添加调试信息
-                    this.logDebug('viewPrevImage called');
-                    this.logDebug(`Current viewing image: ${this.currentViewingImage ? this.currentViewingImage.id : 'none'}`);
-                    this.logDebug(`Images count: ${this.images.length}, Total count: ${this.totalCount}`);
-                    this.logDebug(`Is loading more: ${this.isLoadingMore}`);
-                    
                     // 防止重复调用
                     if (this.isLoadingMore || !this.currentViewingImage) {
-                        this.logDebug('Aborted - loading in progress or no current image');
                         return;
                     }
                     
                     // 获取当前图片在数组中的索引
                     const currentIndex = this.images.findIndex(img => img.id === this.currentViewingImage.id);
                     
-                    this.logDebug(`Current image index: ${currentIndex}`);
-                    
                     if (currentIndex === -1) {
                         this.showToast('找不到当前图片');
-                        this.logDebug('Current image not found in images array', 'error');
                         return;
                     }
                     
@@ -1172,38 +1016,27 @@
                     
                     if (prevIndex >= 0) {
                         // 已加载的图片中还有上一张
-                        this.logDebug(`Loading previous image at index: ${prevIndex}, with id: ${this.images[prevIndex].id}`);
                         this.viewImage(this.images[prevIndex]);
                         this.updatePageIndicator();
                     } else {
                         // 已达到所有图片的开头
-                        this.logDebug('Reached beginning of all images');
                         this.showToast('已到达第一张图片');
                     }
                 },
                 
                 // 加载更多图片（仅向数组末尾添加，保持顺序稳定）
                 loadMoreImages: function() {
-                    // 添加调试信息
-                    this.logDebug('loadMoreImages called');
-                    this.logDebug(`Current images length: ${this.images.length}`);
-                    this.logDebug(`Total count: ${this.totalCount}`);
-                    
                     // 检查是否已经加载了所有图片或者已经在加载中
                     if (this.isLoadingMore) {
-                        this.logDebug('Already loading more images, aborting');
                         return Promise.resolve();
                     }
                     
                     if (this.images.length >= this.totalCount) {
-                        this.logDebug('All images already loaded');
                         return Promise.resolve();
                     }
                     
                     this.isLoadingMore = true;
                     const nextPage = Math.floor(this.images.length / this.batchSize) + 1; // 基于已有图片数量计算下一页
-                    
-                    this.logDebug(`Loading page: ${nextPage} with batch size: ${this.batchSize}`);
                     
                     return axios.get(`/api/images/${categoryId}`, {
                         params: {
@@ -1215,45 +1048,24 @@
                         }
                     })
                     .then(response => {
-                        this.logDebug(`API response received. Status: ${response.status}`);
-                        this.logDebug(`Response data images count: ${response.data.images ? response.data.images.length : 0}`);
-                        
                         if (response.data.images && response.data.images.length > 0) {
                             // 过滤掉已经存在的图片，避免重复显示
                             const existingImageIds = new Set(this.images.map(img => img.id));
                             const newImages = response.data.images.filter(img => !existingImageIds.has(img.id));
                             
-                            this.logDebug(`Filtered new images count: ${newImages.length}`);
-                            
                             if (newImages.length > 0) {
-                                // 记录添加前的最后一个ID
-                                const lastIdBefore = this.images.length > 0 ? this.images[this.images.length - 1].id : 'none';
                                 // 只添加新图片到数组末尾，保持图片顺序稳定
                                 this.images = [...this.images, ...newImages];
-                                // 记录添加后的最后一个ID
-                                const lastIdAfter = this.images[this.images.length - 1].id;
-                                
-                                this.logDebug(`Images array updated. Before: ${this.images.length - newImages.length}, After: ${this.images.length}`);
-                                this.logDebug(`Last ID before: ${lastIdBefore}, Last ID after: ${lastIdAfter}`);
                                 
                                 // 确保只显示一个视图
                                 this.updateView();
-                            } else {
-                                this.logDebug('No new images found in response');
                             }
-                        } else {
-                            this.logDebug('No images in response');
                         }
                     })
                     .catch(error => {
-                        this.logDebug(`加载更多图片失败: ${error}`, 'error');
-                        if (error.response) {
-                            this.logDebug(`Response status: ${error.response.status}`, 'error');
-                            this.logDebug(`Response data: ${JSON.stringify(error.response.data)}`, 'error');
-                        }
+                        console.error('加载更多图片失败:', error);
                     })
                     .finally(() => {
-                        this.logDebug('Load more completed, resetting isLoadingMore');
                         this.isLoadingMore = false;
                     });
                 },
@@ -1344,7 +1156,6 @@
                     e.target.removeEventListener('error', this.onImageError);
                     // 添加详细错误日志
                     console.error('图片加载失败:', e.target.src);
-                    console.log('图片信息:', e.target.alt);
                     // 设置默认的错误占位图，使用正确的webp格式
                     e.target.src = '/static/images/error.webp';
                     e.target.title = '图片加载失败: ' + e.target.alt;
@@ -1629,7 +1440,6 @@
 // 全局函数：显示/隐藏图片详情
 function toggleImageDetails() {
     try {
-        console.log('全局toggleImageDetails函数被调用');
         const imageViewerInfo = document.querySelector('.image-viewer-info');
         const viewerFilename = document.getElementById('viewer-filename');
         const viewerDetails = document.getElementById('viewer-details');
@@ -1662,10 +1472,8 @@ function toggleImageDetails() {
             // 切换显示状态
             if (isCurrentlyShowing) {
                 imageViewerInfo.classList.remove('show');
-                console.log('已隐藏详情信息');
             } else {
                 imageViewerInfo.classList.add('show');
-                console.log('已显示详情信息');
             }
             
             // 强制重绘以确保CSS更新
@@ -1684,7 +1492,6 @@ function toggleImageDetails() {
     
     // 全局函数：下载图片
     window.toggleDownload = function() {
-        console.log('toggleDownload called');
         if (window.app && typeof window.app.downloadCurrentImage === 'function') {
             window.app.downloadCurrentImage();
         }
@@ -1693,7 +1500,6 @@ function toggleImageDetails() {
     
     // 全局函数：删除图片 - 简化版本，直接调用Vue实例方法
     function deleteImage() {
-        console.log('deleteImage called');
         if (window.app && typeof window.app.deleteCurrentImage === 'function') {
             window.app.deleteCurrentImage();
         }

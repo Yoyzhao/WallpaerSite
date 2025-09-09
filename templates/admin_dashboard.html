@@ -183,6 +183,54 @@
         border: 1px solid #f5c6cb;
     }
     
+    /* 特性列表样式 */
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 15px 0 20px 0;
+    }
+    
+    .feature-list li {
+        padding: 8px 0;
+        padding-left: 25px;
+        position: relative;
+        color: #444;
+    }
+    
+    .feature-list li i {
+        position: absolute;
+        left: 0;
+        color: #007bff;
+        font-size: 16px;
+    }
+    
+    /* 重要提示样式 */
+    .important-notes {
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 15px;
+        border-radius: 0 4px 4px 0;
+        margin-top: 10px;
+    }
+    
+    .important-notes p {
+        margin: 0 0 10px 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .important-notes ul {
+        padding-left: 20px;
+        margin: 0;
+    }
+    
+    .important-notes li {
+        padding: 3px 0;
+        color: #555;
+        font-size: 14px;
+    }
+    
     .progress-container {
         width: 100%;
         background: #f3f3f3;
@@ -291,20 +339,22 @@
     <div class="dashboard-card" style="grid-column: 1 / -1;">
         <h3 class="dashboard-title"><i class="fas fa-info-circle"></i> 系统信息</h3>
         <div class="system-info">
-            <p>欢迎使用壁纸浏览网站管理面板！</p>
-            <p>在此面板中，您可以：</p>
-            <ul>
-                <li>添加新的图片分类</li>
-                <li>扫描现有文件夹以导入图片</li>
-                <li>上传新的图片到指定分类</li>
-                <li>删除不需要的分类（默认分类除外）</li>
+            <p>您可以在此面板中：</p>
+            <ul class="feature-list">
+                <li><i class="fas fa-plus-circle"></i> 添加新的图片分类</li>
+                <li><i class="fas fa-search"></i> 扫描现有文件夹导入图片</li>
+                <li><i class="fas fa-upload"></i> 上传新图片到指定分类</li>
+                <li><i class="fas fa-trash-alt"></i> 删除不需要的分类（默认分类除外）</li>
             </ul>
-            <p>注意事项：</p>
-            <ul>
-                <li>添加分类时，请确保文件夹路径有效</li>
-                <li>上传图片时，请确保文件格式为支持的图片格式（PNG, JPG, JPEG, GIF, BMP）</li>
-                <li>删除分类将不会删除实际的文件，但会从数据库中移除相关记录</li>
-            </ul>
+            
+            <div class="important-notes">
+                <p><strong>注意事项：</strong></p>
+                <ul>
+                    <li>添加分类时，请确保文件夹路径有效</li>
+                    <li>支持的图片格式：PNG, JPG, JPEG, GIF, BMP</li>
+                    <li>删除分类不会删除实际文件，仅移除数据库记录</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -320,17 +370,8 @@
         addCategoryForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // 详细日志记录
-            console.log('开始处理添加分类请求');
-            console.log('表单元素:', addCategoryForm);
-            console.log('状态元素:', categoryStatus);
-            
             const name = document.getElementById('category-name').value;
             const folderPath = document.getElementById('category-path').value;
-            
-            console.log('分类名称:', name);
-            console.log('文件夹路径:', folderPath);
-            console.log('Axios版本:', axios ? '已加载' : '未加载');
             
             // 显示加载状态
             categoryStatus.textContent = '处理中...';
@@ -347,9 +388,6 @@
                 })
                 .then(response => {
                     const endTime = new Date().getTime();
-                    console.log('请求完成，耗时:', endTime - startTime, 'ms');
-                    console.log('响应状态码:', response.status);
-                    console.log('响应数据:', response.data);
                     
                     if (response.data.success) {
                         categoryStatus.textContent = response.data.message;
@@ -372,18 +410,7 @@
                     }
                 })
                 .catch(error => {
-                    const endTime = new Date().getTime();
-                    console.log('请求失败，耗时:', endTime - startTime, 'ms');
                     console.error('添加分类失败:', error);
-                    if (error.response) {
-                        console.log('错误响应状态码:', error.response.status);
-                        console.log('错误响应数据:', error.response.data);
-                    } else if (error.request) {
-                        console.log('无响应数据:', error.request);
-                    } else {
-                        console.log('请求配置错误:', error.message);
-                    }
-                    console.log('错误配置:', error.config);
                     
                     categoryStatus.textContent = '添加分类失败，请重试';
                     categoryStatus.classList.add('status-error');
