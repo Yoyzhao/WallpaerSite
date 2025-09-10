@@ -432,15 +432,10 @@ function initCategoryPage() {
                 });
             }
             
-            // 删除按钮事件
+            // 删除按钮事件已在HTML中通过onclick属性直接设置，这里不再重复绑定
+            // 防止重复触发confirm对话框
             if (deleteBtn) {
-                deleteBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    // 调用Vue实例的删除图片方法
-                    if (window.app && window.app.deleteCurrentImage) {
-                        window.app.deleteCurrentImage();
-                    }
-                });
+                // 这里仅保留一个空的条件判断，避免代码错误
             }
         }
         
