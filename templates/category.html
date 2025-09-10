@@ -1076,50 +1076,58 @@
                 deleteCurrentImage: function() {
                     if (!this.currentViewingImage) return;
                     
-                    // 使用浏览器默认的confirm
-                    if (confirm('确定要删除这张图片吗？此操作不可恢复。')) {
-                        const currentImage = this.currentViewingImage;
-                        
-                        // 调用API删除图片
-                        axios.delete(`/api/images/${currentImage.id}`)
-                            .then(response => {
-                                this.showToast('图片删除成功');
-                                
-                                // 获取当前图片在数组中的索引
-                                const currentIndex = this.images.findIndex(img => img.id === currentImage.id);
-                                
-                                // 从数组中移除图片
-                                if (currentIndex !== -1) {
-                                    this.images.splice(currentIndex, 1);
-                                }
-                                
-                                // 如果还有图片，显示下一张或上一张
-                                if (this.images.length > 0) {
-                                    // 决定显示下一张还是上一张
-                                    let newImage;
-                                    if (currentIndex < this.images.length) {
-                                        // 如果不是最后一张，显示原来位置的图片
-                                        newImage = this.images[currentIndex];
-                                    } else if (this.images.length > 0) {
-                                        // 如果是最后一张，显示上一张
-                                        newImage = this.images[this.images.length - 1];
+                    // 使用自定义确认对话框
+                    const vm = this;
+                    showConfirmDialog(
+                        '确定要删除这张图片吗？此操作不可恢复。',
+                        function() {
+                            // 确认删除
+                            const currentImage = vm.currentViewingImage;
+                            
+                            // 调用API删除图片
+                            axios.delete(`/api/images/${currentImage.id}`)
+                                .then(response => {
+                                    vm.showToast('图片删除成功');
+                                    
+                                    // 获取当前图片在数组中的索引
+                                    const currentIndex = vm.images.findIndex(img => img.id === currentImage.id);
+                                    
+                                    // 从数组中移除图片
+                                    if (currentIndex !== -1) {
+                                        vm.images.splice(currentIndex, 1);
                                     }
                                     
-                                    if (newImage) {
-                                        this.viewImage(newImage);
+                                    // 如果还有图片，显示下一张或上一张
+                                    if (vm.images.length > 0) {
+                                        // 决定显示下一张还是上一张
+                                        let newImage;
+                                        if (currentIndex < vm.images.length) {
+                                            // 如果不是最后一张，显示原来位置的图片
+                                            newImage = vm.images[currentIndex];
+                                        } else if (vm.images.length > 0) {
+                                            // 如果是最后一张，显示上一张
+                                            newImage = vm.images[vm.images.length - 1];
+                                        }
+                                        
+                                        if (newImage) {
+                                            vm.viewImage(newImage);
+                                        }
+                                    } else {
+                                        // 如果没有图片了，关闭查看器
+                                        vm.closeImageViewer();
+                                        // 重新加载页面数据
+                                        vm.loadImages();
                                     }
-                                } else {
-                                    // 如果没有图片了，关闭查看器
-                                    this.closeImageViewer();
-                                    // 重新加载页面数据
-                                    this.loadImages();
-                                }
-                            })
-                            .catch(error => {
-                                console.error('删除图片失败:', error);
-                                this.showToast('删除图片失败，请重试。');
-                            });
-                    }
+                                })
+                                .catch(error => {
+                                    console.error('删除图片失败:', error);
+                                    vm.showToast('删除图片失败，请重试。');
+                                });
+                        },
+                        function() {
+                            // 取消删除，不执行任何操作
+                        }
+                    );
                 },
                 
 
@@ -1504,6 +1512,139 @@ function toggleImageDetails() {
             window.app.deleteCurrentImage();
         }
         return false;
+    }
+    
+    // 全局函数：自定义确认对话框
+    function showConfirmDialog(message, confirmCallback, cancelCallback) {
+        // 检查是否已存在确认对话框，如果有则移除
+        let existingDialog = document.getElementById('custom-confirm-dialog');
+        if (existingDialog) {
+            document.body.removeChild(existingDialog);
+        }
+        
+        // 创建对话框容器
+        const dialog = document.createElement('div');
+        dialog.id = 'custom-confirm-dialog';
+        dialog.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        
+        // 创建对话框内容
+        const dialogContent = document.createElement('div');
+        dialogContent.style.cssText = `
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        `;
+        
+        // 创建消息文本
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        messageElement.style.cssText = `
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #333;
+            text-align: center;
+        `;
+        
+        // 创建按钮容器
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.cssText = `
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        `;
+        
+        // 创建取消按钮
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = '取消';
+        cancelButton.style.cssText = `
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        `;
+        cancelButton.addEventListener('mouseover', function() {
+            this.style.backgroundColor = '#f5f5f5';
+        });
+        cancelButton.addEventListener('mouseout', function() {
+            this.style.backgroundColor = 'white';
+        });
+        cancelButton.addEventListener('click', function() {
+            document.body.removeChild(dialog);
+            if (typeof cancelCallback === 'function') {
+                cancelCallback();
+            }
+        });
+        
+        // 创建确认按钮
+        const confirmButton = document.createElement('button');
+        confirmButton.textContent = '确认';
+        confirmButton.style.cssText = `
+            padding: 10px 20px;
+            border: none;
+            background: #dc3545;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        `;
+        confirmButton.addEventListener('mouseover', function() {
+            this.style.backgroundColor = '#c82333';
+        });
+        confirmButton.addEventListener('mouseout', function() {
+            this.style.backgroundColor = '#dc3545';
+        });
+        confirmButton.addEventListener('click', function() {
+            document.body.removeChild(dialog);
+            if (typeof confirmCallback === 'function') {
+                confirmCallback();
+            }
+        });
+        
+        // 组装对话框
+        buttonsContainer.appendChild(cancelButton);
+        buttonsContainer.appendChild(confirmButton);
+        dialogContent.appendChild(messageElement);
+        dialogContent.appendChild(buttonsContainer);
+        dialog.appendChild(dialogContent);
+        document.body.appendChild(dialog);
+        
+        // 触发重绘并应用动画
+        void dialog.offsetWidth;
+        dialog.style.opacity = '1';
+        dialogContent.style.transform = 'translateY(0)';
+        
+        // 点击背景关闭对话框
+        dialog.addEventListener('click', function(e) {
+            if (e.target === dialog) {
+                document.body.removeChild(dialog);
+                if (typeof cancelCallback === 'function') {
+                    cancelCallback();
+                }
+            }
+        });
     }
     </script>
 {% endblock %}

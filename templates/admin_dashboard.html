@@ -567,24 +567,225 @@
             button.addEventListener('click', function() {
                 const categoryId = this.getAttribute('data-id');
                 const categoryName = this.getAttribute('data-name');
+                const btn = this;
                 
-                if (confirm(`确定要删除分类 "${categoryName}" 吗？`)) {
+                showConfirmDialog(`确定要删除分类 "${categoryName}" 吗？`, function() {
+                    // 显示加载状态
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
+                    btn.disabled = true;
+                    
                     axios.post(`/admin/delete_category/${categoryId}`)
                     .then(response => {
                         if (response.data.success) {
-                            alert(response.data.message);
-                            window.location.reload();
+                            showToast(response.data.message);
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
                         } else {
-                            alert(response.data.message);
+                            showToast(response.data.message);
                         }
                     })
                     .catch(error => {
                         console.error('删除分类失败:', error);
-                        alert('删除分类失败，请重试');
+                        showToast('删除分类失败，请重试');
+                    })
+                    .finally(() => {
+                        // 恢复按钮状态
+                        btn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除';
+                        btn.disabled = false;
                     });
-                }
+                });
             });
         });
+        
+        // 显示临时提示函数
+        function showToast(message, duration = 3000) {
+            // 检查是否已存在toast元素
+            let toast = document.getElementById('custom-toast');
+            if (!toast) {
+                // 创建toast元素
+                toast = document.createElement('div');
+                toast.id = 'custom-toast';
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background-color: rgba(0, 0, 0, 0.7);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    z-index: 9999;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                    pointer-events: none;
+                    white-space: nowrap;
+                `;
+                document.body.appendChild(toast);
+            }
+            
+            // 清除之前的定时器（如果有）
+            if (toast.timeout) {
+                clearTimeout(toast.timeout);
+            }
+            
+            // 设置消息并显示
+            toast.textContent = message;
+            // 强制重绘
+            void toast.offsetWidth;
+            toast.style.opacity = '1';
+            
+            // 设置定时器隐藏
+            toast.timeout = setTimeout(() => {
+                toast.style.opacity = '0';
+            }, duration);
+        }
+        
+        // 显示确认对话框函数
+        function showConfirmDialog(message, onConfirm, onCancel = null) {
+            // 检查是否已存在对话框元素
+            let confirmDialog = document.getElementById('custom-confirm-dialog');
+            if (confirmDialog) {
+                document.body.removeChild(confirmDialog);
+            }
+            
+            // 创建对话框背景
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.id = 'custom-confirm-dialog';
+            dialogOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            // 创建对话框内容
+            const dialogContent = document.createElement('div');
+            dialogContent.style.cssText = `
+                background-color: white;
+                border-radius: 8px;
+                padding: 20px;
+                width: 90%;
+                max-width: 400px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                transform: translateY(-20px);
+                transition: transform 0.3s ease;
+            `;
+            
+            // 创建消息文本
+            const dialogMessage = document.createElement('p');
+            dialogMessage.textContent = message;
+            dialogMessage.style.cssText = `
+                margin: 0 0 20px 0;
+                color: #333;
+                font-size: 16px;
+                line-height: 1.5;
+            `;
+            
+            // 创建按钮容器
+            const dialogButtons = document.createElement('div');
+            dialogButtons.style.cssText = `
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            `;
+            
+            // 创建取消按钮
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = '取消';
+            cancelButton.style.cssText = `
+                padding: 8px 16px;
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                color: #495057;
+                transition: background-color 0.2s ease;
+            `;
+            cancelButton.addEventListener('mouseover', function() {
+                this.style.backgroundColor = '#e9ecef';
+            });
+            cancelButton.addEventListener('mouseout', function() {
+                this.style.backgroundColor = '#f8f9fa';
+            });
+            
+            // 创建确认按钮
+            const confirmButton = document.createElement('button');
+            confirmButton.textContent = '确认';
+            confirmButton.style.cssText = `
+                padding: 8px 16px;
+                background-color: #007bff;
+                border: 1px solid #007bff;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                color: white;
+                transition: background-color 0.2s ease;
+            `;
+            confirmButton.addEventListener('mouseover', function() {
+                this.style.backgroundColor = '#0056b3';
+            });
+            confirmButton.addEventListener('mouseout', function() {
+                this.style.backgroundColor = '#007bff';
+            });
+            
+            // 组装对话框
+            dialogButtons.appendChild(cancelButton);
+            dialogButtons.appendChild(confirmButton);
+            dialogContent.appendChild(dialogMessage);
+            dialogContent.appendChild(dialogButtons);
+            dialogOverlay.appendChild(dialogContent);
+            document.body.appendChild(dialogOverlay);
+            
+            // 触发动画
+            setTimeout(() => {
+                dialogOverlay.style.opacity = '1';
+                dialogContent.style.transform = 'translateY(0)';
+            }, 10);
+            
+            // 关闭对话框函数
+            function closeDialog() {
+                dialogOverlay.style.opacity = '0';
+                dialogContent.style.transform = 'translateY(-20px)';
+                setTimeout(() => {
+                    document.body.removeChild(dialogOverlay);
+                }, 300);
+            }
+            
+            // 绑定按钮事件
+            cancelButton.addEventListener('click', function() {
+                closeDialog();
+                if (typeof onCancel === 'function') {
+                    onCancel();
+                }
+            });
+            
+            confirmButton.addEventListener('click', function() {
+                closeDialog();
+                if (typeof onConfirm === 'function') {
+                    onConfirm();
+                }
+            });
+            
+            // 点击背景关闭对话框
+            dialogOverlay.addEventListener('click', function(e) {
+                if (e.target === dialogOverlay) {
+                    closeDialog();
+                    if (typeof onCancel === 'function') {
+                        onCancel();
+                    }
+                }
+            });
+        }
         
         // 扫描文件夹按钮
         const scanButtons = document.querySelectorAll('.scan-btn');
@@ -599,14 +800,14 @@
                 axios.post(`/admin/scan_folder/${categoryId}`)
                 .then(response => {
                     if (response.data.success) {
-                        alert(response.data.message);
+                        showToast(response.data.message);
                     } else {
-                        alert(response.data.message);
+                        showToast(response.data.message);
                     }
                 })
                 .catch(error => {
                     console.error('扫描文件夹失败:', error);
-                    alert('扫描文件夹失败，请重试');
+                    showToast('扫描文件夹失败，请重试');
                 })
                 .finally(() => {
                     // 恢复按钮状态
@@ -886,7 +1087,7 @@
             const files = uploadFile.files;
             
             if (files.length === 0) {
-                alert('请选择要上传的图片');
+                showToast('请选择要上传的图片');
                 return;
             }
             
