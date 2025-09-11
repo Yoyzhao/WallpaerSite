@@ -19,11 +19,16 @@
     </div>
 </div>
 
-<div class="about-section">
+<button id="aboutButton" class="about-button">
+    <i class="fas fa-info-circle"></i> 关于网站
+</button>
+
+<div class="about-section" style="display: none;">
     <div class="about-content">
         <h2><i class="fas fa-info-circle"></i> 关于网站</h2>
-        <p>欢迎来到壁纸浏览网站！这里收集了各种精美的壁纸图片，您可以通过分类浏览、搜索功能找到喜欢的图片。管理员可以登录后上传新图片、管理分类。</p>
-        <p>使用方法：点击上方分类进入图片浏览页面，可以切换瀑布流和分页式两种视图模式，点击图片查看大图及详情。</p>
+        <p>欢迎来到我的多媒体小站！这里有我收集的各种精美图片和视频。</p>
+        <p>可以切换瀑布流和分页式两种视图模式，点击图片查看大图及详情。</p>
+        <p>&copy; {{ current_year }} Yoy基于AI开发</p>
     </div>
 </div>
 {% endblock %}
@@ -41,6 +46,72 @@
                 this.classList.remove('hover');
             });
         });
+        
+        // 关于网站按钮点击功能
+        const aboutButton = document.getElementById('aboutButton');
+        const aboutSection = document.querySelector('.about-section');
+        
+        aboutButton.addEventListener('click', function() {
+            if (aboutSection.style.display === 'none' || aboutSection.style.display === '') {
+                aboutSection.style.display = 'block';
+                aboutButton.textContent = '收起关于';
+                aboutButton.innerHTML = '<i class="fas fa-chevron-up"></i> 收起关于';
+            } else {
+                aboutSection.style.display = 'none';
+                aboutButton.textContent = '关于网站';
+                aboutButton.innerHTML = '<i class="fas fa-info-circle"></i> 关于网站';
+            }
+        });
+        
+        // 设置首页main背景图片
+        function setRandomBackground() {
+            // 获取main元素
+            const mainElement = document.querySelector('.main');
+            
+            // 设置基本的背景样式
+            mainElement.style.position = 'relative';
+            mainElement.style.backgroundSize = 'cover';
+            mainElement.style.backgroundPosition = 'center';
+            mainElement.style.backgroundRepeat = 'no-repeat';
+            mainElement.style.backgroundAttachment = 'fixed';
+            mainElement.style.transition = 'background-image 1.5s ease-in-out';
+            mainElement.style.opacity = '0.8'; // 设置图片透明度为80%
+            
+            // 确保内容清晰可见
+            const container = mainElement.querySelector('.container');
+            if (container) {
+                container.style.position = 'relative';
+                container.style.opacity = '1'; // 内容保持完全不透明
+            }
+            
+            // 向API请求获取默认分类(分类ID为1)的图片列表
+            axios.get('/api/category/1/images', {
+                params: {
+                    per_page: 100 // 获取足够多的图片以随机选择
+                }
+            })
+            .then(response => {
+                // 检查响应数据格式
+                if (response.data && Array.isArray(response.data.images) && response.data.images.length > 0) {
+                    const images = response.data.images;
+                    // 随机选择一张图片
+                    const randomIndex = Math.floor(Math.random() * images.length);
+                    const randomImage = images[randomIndex];
+                    
+                    // 确保图片路径有效
+                    if (randomImage && randomImage.filepath) {
+                        mainElement.style.backgroundImage = `url('${randomImage.filepath}')`;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('获取背景图片失败:', error);
+                // 不使用外部图片作为fallback，只保持基本样式
+            });
+        }
+        
+        // 初始化时设置背景图片
+        setRandomBackground();
     });
 </script>
 {% endblock %}

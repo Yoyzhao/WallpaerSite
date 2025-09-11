@@ -129,61 +129,25 @@ function initLazyLoading() {
 
 // 分类页面初始化
 function initCategoryPage() {
-    // 图片查看器逻辑
+    // 图片查看器逻辑 - 已取消缩放功能
     const imageViewer = document.getElementById('image-viewer');
     if (imageViewer) {
         const viewerImage = document.getElementById('viewer-image');
-        let scale = 1;
-        let x = 0;
-        let y = 0;
-        const minScale = 0.5;
-        const maxScale = 5;
-        const scaleStep = 0.1;
-        let isDragging = false;
-        let lastX = 0;
-        let lastY = 0;
         
         // 重置图片状态
         function resetImageState() {
-            scale = 1;
-            x = 0;
-            y = 0;
             if (viewerImage) {
                 viewerImage.style.transform = 'translate(0, 0) scale(1)';
-                viewerImage.style.cursor = 'zoom-in';
+                viewerImage.style.cursor = 'default';
             }
         }
         
-        // 应用图片变换
+        // 应用图片变换 - 始终保持原始大小
         function applyImageTransform() {
             if (viewerImage) {
-                viewerImage.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
-                viewerImage.style.cursor = isDragging ? 'grabbing' : (scale > 1 ? 'grab' : 'zoom-in');
+                viewerImage.style.transform = 'translate(0, 0) scale(1)';
+                viewerImage.style.cursor = 'default';
             }
-        }
-        
-        // 缩放图片函数
-        function scaleImage(delta, centerX, centerY) {
-            if (!viewerImage) return;
-            
-            // 保存当前中心点
-            const currentScale = scale;
-            
-            // 计算新的缩放比例
-            if (delta > 0) {
-                scale = Math.min(scale + scaleStep, maxScale);
-            } else {
-                scale = Math.max(scale - scaleStep, minScale);
-            }
-            
-            // 如果提供了中心点，则围绕该点缩放
-            if (centerX !== undefined && centerY !== undefined) {
-                const scaleRatio = scale / currentScale;
-                x = centerX - (centerX - x) * scaleRatio;
-                y = centerY - (centerY - y) * scaleRatio;
-            }
-            
-            applyImageTransform();
         }
         
         // 点击空白处关闭查看器
@@ -216,180 +180,138 @@ function initCategoryPage() {
             }
         });
         
-        // 鼠标滚轮缩放
-        if (viewerImage) {
-            viewerImage.addEventListener('wheel', function(e) {
-                e.preventDefault();
-                
-                // 获取鼠标在图片上的位置
-                const rect = viewerImage.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left - rect.width / 2;
-                const mouseY = e.clientY - rect.top - rect.height / 2;
-                
-                // 检查是否按住Ctrl键（Windows）或Command键（Mac）
-                if (e.ctrlKey || e.metaKey) {
-                    // 使用deltaY的正负来判断滚轮方向
-                    scaleImage(-e.deltaY, mouseX, mouseY);
-                }
-            }, { passive: false });
+        // 检测设备类型
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // 如果是移动设备，使用触摸交互逻辑
+        if (isMobile && viewerImage) {
+            // 获取所有需要控制显示/隐藏的按钮元素
+            const actionsContainer = document.querySelector('.image-viewer-actions');
+            const closeBtn = document.querySelector('.close-btn');
+            const prevBtn = document.getElementById('prev-image');
+            const nextBtn = document.getElementById('next-image');
             
-            // 点击图片在新标签页打开
+            let lastTapTime = 0;
+            let isControlsVisible = false;
+            
+            // 同时控制所有控制按钮的显示/隐藏
+            function toggleControlsVisibility(show) {
+                // 操作按钮容器
+                if (actionsContainer) {
+                    actionsContainer.style.opacity = show ? '1' : '0';
+                    actionsContainer.style.visibility = show ? 'visible' : 'hidden';
+                    actionsContainer.style.pointerEvents = show ? 'auto' : 'none';
+                }
+                // 关闭按钮
+                if (closeBtn) {
+                    closeBtn.style.opacity = show ? '1' : '0';
+                    closeBtn.style.visibility = show ? 'visible' : 'hidden';
+                    closeBtn.style.pointerEvents = show ? 'auto' : 'none';
+                }
+                // 上一页按钮
+                if (prevBtn) {
+                    prevBtn.style.opacity = show ? '1' : '0';
+                    prevBtn.style.visibility = show ? 'visible' : 'hidden';
+                    prevBtn.style.pointerEvents = show ? 'auto' : 'none';
+                }
+                // 下一页按钮
+                if (nextBtn) {
+                    nextBtn.style.opacity = show ? '1' : '0';
+                    nextBtn.style.visibility = show ? 'visible' : 'hidden';
+                    nextBtn.style.pointerEvents = show ? 'auto' : 'none';
+                }
+                
+                isControlsVisible = show;
+            }
+            
+            // 轻触（单击）显示/隐藏所有控制按钮
             viewerImage.addEventListener('click', function(e) {
                 e.stopPropagation();
                 
-                // 如果是双指点击，忽略
-                if (e.touches && e.touches.length > 1) {
-                    return;
-                }
+                // 获取当前时间戳
+                const currentTime = Date.now();
                 
-                // 如果刚刚发生了拖拽，则不执行点击操作
-                if (isDragging) {
-                    isDragging = false;
-                    viewerImage.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
-                    return;
-                }
-                
-                // 在新标签页打开图片
-                window.open(viewerImage.src, '_blank');
-            });
-            
-            // 鼠标拖拽功能
-            viewerImage.addEventListener('mousedown', function(e) {
-                e.preventDefault();
-                isDragging = true;
-                lastX = e.clientX;
-                lastY = e.clientY;
-                viewerImage.style.cursor = 'grabbing';
-            });
-            
-            document.addEventListener('mousemove', function(e) {
-                if (!isDragging) return;
-                
-                const deltaX = e.clientX - lastX;
-                const deltaY = e.clientY - lastY;
-                
-                x += deltaX;
-                y += deltaY;
-                
-                lastX = e.clientX;
-                lastY = e.clientY;
-                
-                applyImageTransform();
-            });
-            
-            document.addEventListener('mouseup', function() {
-                if (isDragging) {
-                    isDragging = false;
-                    viewerImage.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
+                // 判断是否是双击操作（两次点击间隔小于300毫秒）
+                if (currentTime - lastTapTime < 300) {
+                    // 双击操作：在新标签页打开图片
+                    window.open(viewerImage.src, '_blank');
+                    lastTapTime = 0; // 重置双击检测
+                } else {
+                    // 单击操作：切换所有控制按钮的显示状态
+                    toggleControlsVisibility(!isControlsVisible);
+                    lastTapTime = currentTime;
                 }
             });
             
-            document.addEventListener('mouseleave', function() {
-                if (isDragging) {
-                    isDragging = false;
-                    viewerImage.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
+            // 为所有控制元素添加过渡效果和初始状态
+            const allControls = [actionsContainer, closeBtn, prevBtn, nextBtn];
+            allControls.forEach(control => {
+                if (control) {
+                    // 确保元素默认隐藏
+                    control.style.opacity = '0';
+                    control.style.visibility = 'hidden';
+                    control.style.pointerEvents = 'none';
+                    
+                    // 添加平滑过渡动画 - 只对opacity进行过渡，visibility立即变化
+                    control.style.transition = 'opacity 0.3s ease';
                 }
             });
             
-            // 触摸事件缩放和拖拽支持
-            let touchStartDistance = 0;
-            let touchStartScale = 1;
-            let touchStartX = 0;
-            let touchStartY = 0;
-            let isTouchDragging = false;
-            
-            viewerImage.addEventListener('touchstart', function(e) {
-                if (e.touches.length === 1) {
-                    // 单指触摸开始（可能是拖拽）
-                    isTouchDragging = true;
-                    touchStartX = e.touches[0].clientX - x;
-                    touchStartY = e.touches[0].clientY - y;
-                } else if (e.touches.length === 2) {
-                    // 双指触摸开始（缩放）
-                    isTouchDragging = false;
-                    // 计算两指之间的距离
-                    const dx = e.touches[0].clientX - e.touches[1].clientX;
-                    const dy = e.touches[0].clientY - e.touches[1].clientY;
-                    touchStartDistance = Math.sqrt(dx * dx + dy * dy);
-                    touchStartScale = scale;
-                    // 计算两指中心点
-                    touchStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                    touchStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                }
-            });
-            
-            viewerImage.addEventListener('touchmove', function(e) {
-                if (e.touches.length === 1 && isTouchDragging && scale > 1) {
-                    // 单指拖拽
-                    e.preventDefault();
-                    x = e.touches[0].clientX - touchStartX;
-                    y = e.touches[0].clientY - touchStartY;
-                    applyImageTransform();
-                } else if (e.touches.length >= 2) {
-                    // 双指或更多手指缩放
-                    e.preventDefault();
-                    // 如果之前是拖拽状态，现在切换到缩放状态
-                    if (isTouchDragging) {
-                        isTouchDragging = false;
-                        // 重新计算缩放相关参数
-                        const dx = e.touches[0].clientX - e.touches[1].clientX;
-                        const dy = e.touches[0].clientY - e.touches[1].clientY;
-                        touchStartDistance = Math.sqrt(dx * dx + dy * dy);
-                        touchStartScale = scale;
+            // 当查看器状态变化时重置图片状态
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'class') {
+                        if (imageViewer.classList.contains('active')) {
+                            // 查看器激活时的操作
+                            resetImageState();
+                            initViewerButtons();
+                            
+                            if (isMobile) {
+                                // 移动端默认隐藏控制按钮
+                                setTimeout(() => toggleControlsVisibility(false), 1000);
+                            } else {
+                                // PC端不需要隐藏控制按钮，让CSS的hover效果正常工作
+                                toggleControlsVisibility(true);
+                            }
+                        } else {
+                            // 查看器关闭时的操作
+                            if (isMobile) {
+                                toggleControlsVisibility(false);
+                                lastTapTime = 0;
+                            }
+                        }
                     }
-                    
-                    // 计算当前两指之间的距离
-                    const dx = e.touches[0].clientX - e.touches[1].clientX;
-                    const dy = e.touches[0].clientY - e.touches[1].clientY;
-                    const touchDistance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    // 计算缩放比例变化
-                    const scaleFactor = touchDistance / touchStartDistance;
-                    const newScale = touchStartScale * scaleFactor;
-                    
-                    // 应用缩放，保持在最小和最大范围内
-                    const prevScale = scale;
-                    scale = Math.max(minScale, Math.min(maxScale, newScale));
-                    
-                    // 计算两指中心点
-                    const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                    const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                    
-                    // 调整位置以保持缩放中心点不变
-                    const rect = viewerImage.getBoundingClientRect();
-                    const imageCenterX = rect.width / 2;
-                    const imageCenterY = rect.height / 2;
-                    const relCenterX = centerX - rect.left - imageCenterX;
-                    const relCenterY = centerY - rect.top - imageCenterY;
-                    
-                    x += relCenterX * (1 - scale/prevScale);
-                    y += relCenterY * (1 - scale/prevScale);
-                    
-                    applyImageTransform();
-                }
-            }, { passive: false });
-            
-            viewerImage.addEventListener('touchend', function(e) {
-                // 只有当所有手指都离开屏幕时才重置拖拽状态
-                if (e.touches.length === 0) {
-                    isTouchDragging = false;
-                }
+                });
             });
+            
+            observer.observe(imageViewer, { attributes: true });
         }
         
-        // 当查看器激活时，重置图片状态并初始化按钮事件
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.attributeName === 'class') {
-                    if (imageViewer.classList.contains('active')) {
-                        resetImageState();
-                        initViewerButtons();
-                    }
+        // 如果是PC端，添加鼠标悬停显示操作按钮的逻辑
+        if (!isMobile && viewerImage) {
+            // 获取所有按钮元素
+            const actionsContainer = document.querySelector('.image-viewer-actions');
+            const closeBtn = document.querySelector('.close-btn');
+            const prevBtn = document.getElementById('prev-image');
+            const nextBtn = document.getElementById('next-image');
+            
+            // PC端默认显示所有控制按钮，让CSS的hover效果正常工作
+            const allControls = [actionsContainer, closeBtn, prevBtn, nextBtn];
+            allControls.forEach(control => {
+                if (control) {
+                    control.style.opacity = '1';
+                    control.style.visibility = 'visible';
+                    control.style.pointerEvents = 'auto';
+                    control.style.transition = 'opacity 0.3s ease';
                 }
             });
-        });
-        
-        observer.observe(imageViewer, { attributes: true });
+            
+            // 恢复图片点击在新标签页打开的功能
+            viewerImage.addEventListener('click', function(e) {
+                e.stopPropagation();
+                window.open(viewerImage.src, '_blank');
+            });
+        }
         
         // 初始化查看器按钮事件
         function initViewerButtons() {
@@ -432,55 +354,135 @@ function initCategoryPage() {
                 });
             }
             
-            // 删除按钮事件
+            // 删除按钮事件已在HTML中通过onclick属性直接设置，这里不再重复绑定
+            // 防止重复触发confirm对话框
             if (deleteBtn) {
-                deleteBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    // 调用Vue实例的删除图片方法
-                    if (window.app && window.app.deleteCurrentImage) {
-                        window.app.deleteCurrentImage();
-                    }
-                });
+                // 这里仅保留一个空的条件判断，避免代码错误
             }
         }
         
-        // 添加滑动切换图片功能
-        if (viewerImage) {
+        // 添加滑动切换图片功能 - 优化版（缩短黑屏时间）
+        if (viewerImage && isMobile) {  // 只在移动端应用推拉式动画
             let touchStartX = 0;
-            let touchEndX = 0;
+            let touchStartY = 0;
+            let currentX = 0;
+            let isDragging = false;
+            let startTime = 0;
+            const container = viewerImage.parentElement; // 获取图片容器
             
             // 触摸开始事件
             viewerImage.addEventListener('touchstart', function(e) {
                 if (e.touches.length === 1) {
                     touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    currentX = 0;
+                    isDragging = true;
+                    startTime = Date.now();
+                    
+                    // 为图片添加过渡效果，使滑动更流畅
+                    viewerImage.style.transition = 'transform 0.1s ease-out';
+                    // 确保容器可以正确处理多个图片
+                    if (container) {
+                        container.style.overflow = 'hidden';
+                        container.style.position = 'relative';
+                    }
                 }
             });
             
-            // 触摸结束事件
+            // 触摸移动事件 - 添加实时视觉反馈
+            viewerImage.addEventListener('touchmove', function(e) {
+                if (e.touches.length === 1 && isDragging) {
+                    const currentTouchX = e.touches[0].clientX;
+                    currentX = currentTouchX - touchStartX;
+                    
+                    // 仅在水平滑动超过垂直滑动时才移动图片（防止误触）
+                    const touchY = e.touches[0].clientY;
+                    const verticalDelta = Math.abs(touchY - touchStartY);
+                    
+                    if (Math.abs(currentX) > verticalDelta * 2) {
+                        e.preventDefault(); // 阻止页面滚动
+                        viewerImage.style.transform = `translateX(${currentX}px)`;
+                    } else {
+                        isDragging = false;
+                        viewerImage.style.transform = 'translateX(0)';
+                    }
+                }
+            });
+            
+            // 触摸结束事件 - 实现推拉式动画（优化黑屏时间）
             viewerImage.addEventListener('touchend', function(e) {
-                if (e.changedTouches.length === 1) {
-                    touchEndX = e.changedTouches[0].clientX;
-                    handleSwipe();
+                if (e.changedTouches.length === 1 && isDragging) {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const swipeDistance = touchEndX - touchStartX;
+                    const swipeTime = Date.now() - startTime;
+                    
+                    // 缩短动画时间
+                    viewerImage.style.transition = 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    
+                    // 计算滑动速度（像素/毫秒）
+                    const swipeVelocity = Math.abs(swipeDistance) / swipeTime;
+                    
+                    // 动态阈值判断：距离阈值或速度阈值，满足任一即可触发
+                    const distanceThreshold = 80; // 基础距离阈值
+                    const velocityThreshold = 0.5; // 速度阈值（像素/毫秒）
+                    
+                    // 向左滑动（下一张）- 优化版推拉式动画
+                    if (swipeDistance < -distanceThreshold || (swipeDistance < 0 && swipeVelocity > velocityThreshold)) {
+                        if (window.app && window.app.viewNextImage) {
+                            // 执行动画效果：当前图片向左滑出屏幕
+                            viewerImage.style.transform = `translateX(-100%)`;
+                            
+                            // 提前加载下一张图片，不等待动画完成，显著减少黑屏时间
+                            const nextImagePromise = new Promise(resolve => {
+                                window.app.viewNextImage();
+                                // 小延迟确保图片加载和DOM更新
+                                setTimeout(resolve, 50);
+                            });
+                            
+                            // 图片加载后立即执行进入动画
+                            nextImagePromise.then(() => {
+                                // 新图片从右侧进入
+                                viewerImage.style.transform = `translateX(100%)`;
+                                // 强制重排以确保动画生效
+                                void viewerImage.offsetWidth;
+                                // 平滑地将图片移动到中心位置
+                                viewerImage.style.transform = 'translateX(0)';
+                            });
+                        }
+                    }
+                    // 向右滑动（上一张）- 优化版推拉式动画
+                    else if (swipeDistance > distanceThreshold || (swipeDistance > 0 && swipeVelocity > velocityThreshold)) {
+                        if (window.app && window.app.viewPrevImage) {
+                            // 执行动画效果：当前图片向右滑出屏幕
+                            viewerImage.style.transform = `translateX(100%)`;
+                            
+                            // 提前加载上一张图片，不等待动画完成，显著减少黑屏时间
+                            const prevImagePromise = new Promise(resolve => {
+                                window.app.viewPrevImage();
+                                // 小延迟确保图片加载和DOM更新
+                                setTimeout(resolve, 50);
+                            });
+                            
+                            // 图片加载后立即执行进入动画
+                            prevImagePromise.then(() => {
+                                // 新图片从左侧进入
+                                viewerImage.style.transform = `translateX(-100%)`;
+                                // 强制重排以确保动画生效
+                                void viewerImage.offsetWidth;
+                                // 平滑地将图片移动到中心位置
+                                viewerImage.style.transform = 'translateX(0)';
+                            });
+                        }
+                    }
+                    // 如果滑动距离不够，弹回原位
+                    else {
+                        viewerImage.style.transform = 'translateX(0)';
+                    }
+                    
+                    // 重置拖动状态
+                    isDragging = false;
                 }
             });
-            
-            // 处理滑动
-            function handleSwipe() {
-                const swipeThreshold = 50; // 滑动阈值
-                
-                // 向左滑动（下一张）
-                if (touchEndX < touchStartX - swipeThreshold) {
-                    if (window.app && window.app.viewNextImage) {
-                        window.app.viewNextImage();
-                    }
-                }
-                // 向右滑动（上一张）
-                else if (touchEndX > touchStartX + swipeThreshold) {
-                    if (window.app && window.app.viewPrevImage) {
-                        window.app.viewPrevImage();
-                    }
-                }
-            }
         }
     }
     
@@ -542,7 +544,7 @@ function initCategoryPage() {
                         selectedImages.add(this.src);
                     }
                     
-                    console.log('选中的图片数量:', selectedImages.size);
+
                 }
             });
         });
@@ -578,9 +580,8 @@ function initCategoryPage() {
         });
     });
     
-    // 排序功能逻辑
+    // 排序功能逻辑（现在排序在后端完成，保留UI按钮）
     const sortButtons = document.querySelectorAll('.sort-btn');
-    let currentSort = 'desc'; // 默认倒序
     
     // 确保只在DOM元素加载完成后添加事件监听器
     if (sortButtons.length > 0) {
@@ -589,76 +590,14 @@ function initCategoryPage() {
                 // 更新按钮状态
                 sortButtons.forEach(btn => btn.classList.remove('active'));
                 this.classList.add('active');
-                currentSort = this.dataset.sort;
                 
                 // 添加点击动画
                 this.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     this.style.transform = 'scale(1)';
                 }, 200);
-                
-                // 排序图片
-                sortImagesByTime(currentSort);
             });
         });
-    }
-    
-    // 按时间排序图片的函数
-    function sortImagesByTime(sortOrder) {
-        // 获取当前活动的视图容器
-        const activeViewMode = document.getElementById('waterfall-btn').classList.contains('active') ? 'waterfall' : 'grid';
-        const imagesContainer = activeViewMode === 'waterfall' ? 
-            document.getElementById('masonry-grid') : 
-            document.getElementById('grid-view');
-        
-        if (!imagesContainer) {
-            console.log('未找到图片容器');
-            return;
-        }
-        
-        // 获取所有图片项
-        const imageItems = Array.from(imagesContainer.querySelectorAll('[data-upload-time]'));
-        
-        if (imageItems.length === 0) {
-            console.log('未找到带上传时间的图片项');
-            return;
-        }
-        
-        // 根据data-upload-time属性排序
-        imageItems.sort((a, b) => {
-            try {
-                const timeA = new Date(a.dataset.uploadTime).getTime();
-                const timeB = new Date(b.dataset.uploadTime).getTime();
-                return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
-            } catch (error) {
-                console.error('排序错误:', error);
-                return 0;
-            }
-        });
-        
-        // 清空容器并重新添加排序后的图片
-        // 添加淡入效果
-        imageItems.forEach(item => {
-            item.style.opacity = '0';
-            item.style.transition = 'opacity 0.3s ease';
-        });
-        
-        // 延迟一点时间再重新添加图片以增强视觉效果
-        setTimeout(() => {
-            // 清空容器
-            while (imagesContainer.firstChild) {
-                imagesContainer.removeChild(imagesContainer.firstChild);
-            }
-            
-            // 重新添加排序后的图片
-            imageItems.forEach((item, index) => {
-                // 设置一点延迟以创建级联效果
-                setTimeout(() => {
-                    imagesContainer.appendChild(item);
-                    item.style.opacity = '1';
-                }, index * 30);
-            });
-        }, 200);
     }
 }
 

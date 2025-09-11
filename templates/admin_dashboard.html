@@ -183,6 +183,54 @@
         border: 1px solid #f5c6cb;
     }
     
+    /* 特性列表样式 */
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 15px 0 20px 0;
+    }
+    
+    .feature-list li {
+        padding: 8px 0;
+        padding-left: 25px;
+        position: relative;
+        color: #444;
+    }
+    
+    .feature-list li i {
+        position: absolute;
+        left: 0;
+        color: #007bff;
+        font-size: 16px;
+    }
+    
+    /* 重要提示样式 */
+    .important-notes {
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 15px;
+        border-radius: 0 4px 4px 0;
+        margin-top: 10px;
+    }
+    
+    .important-notes p {
+        margin: 0 0 10px 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .important-notes ul {
+        padding-left: 20px;
+        margin: 0;
+    }
+    
+    .important-notes li {
+        padding: 3px 0;
+        color: #555;
+        font-size: 14px;
+    }
+    
     .progress-container {
         width: 100%;
         background: #f3f3f3;
@@ -204,115 +252,273 @@
             grid-template-columns: 1fr;
         }
     }
+    
+    /* 标签页样式 */
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .tab-btn {
+        padding: 12px 20px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #6c757d;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+        flex-shrink: 0;
+    }
+    
+    .tab-btn:hover {
+        color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .tab-btn.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .dashboard-container-wrapper {
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .tab-content {
+        margin-top: 10px;
+    }
+    
+    /* 确保section-title和tabs在wrapper内正确显示 */
+    .dashboard-container-wrapper .section-title {
+        color: #333;
+        text-shadow: none;
+    }
+    
+    .tab-pane {
+        display: none;
+    }
+    
+    .tab-pane.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* 响应式调整 */
+    @media (max-width: 768px) {
+        .tabs {
+            justify-content: flex-start;
+        }
+        
+        .tab-btn {
+            padding: 10px 15px;
+            font-size: 13px;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="dashboard-container-wrapper">
 <h2 class="section-title"><i class="fas fa-tachometer-alt"></i> 管理面板</h2>
 
-<div class="dashboard-container">
-    <!-- 分类管理 -->
-    <div class="dashboard-card">
-        <h3 class="dashboard-title"><i class="fas fa-folder"></i> 分类管理</h3>
-        
-        <!-- 添加分类表单 -->
-        <form id="add-category-form" class="upload-form">
-            <div class="form-group">
-                <label class="form-label" for="category-name">分类名称</label>
-                <input type="text" id="category-name" class="form-input" required>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="category-path">文件夹路径</label>
-                <input type="text" id="category-path" class="form-input" required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">添加分类</button>
-        </form>
-        
-        <div id="category-status" class="status-message"></div>
-        
-        <!-- 分类列表 -->
-        <div class="categories-list">
-            <h4>现有分类</h4>
-            {% for category in categories %}
-            <div class="category-item">
-                <div class="category-info">
-                    <div class="category-name">{{ category[1] }}</div>
-                    <div class="category-path">{{ category[1] }}</div>
-                </div>
-                <div class="category-actions">
-                    <button class="btn btn-success scan-btn" data-id="{{ category[0] }}">扫描文件夹</button>
-                    {% if category[1] != '默认分类' %}
-                    <button class="btn btn-danger delete-btn" data-id="{{ category[0] }}" data-name="{{ category[1] }}">删除</button>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    
-    <!-- 图片上传 -->
-    <div class="dashboard-card">
-        <h3 class="dashboard-title"><i class="fas fa-upload"></i> 图片上传</h3>
-        
-        <form id="upload-form" class="upload-form" enctype="multipart/form-data">
-            <div class="form-group">
-                <label class="form-label" for="upload-category">选择分类</label>
-                <select id="upload-category" class="form-input" required>
-                    {% for category in categories %}
-                    <option value="{{ category[0] }}">{{ category[1] }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">选择图片</label>
-                <div class="file-input-wrapper">
-                    <input type="file" id="upload-file" accept="image/*" multiple required>
-                    <span class="file-input-label"><i class="fas fa-file-image"></i> 选择文件</span>
-                </div>
-                <div id="file-name" class="file-name"></div>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">上传图片</button>
-        </form>
-        
-        <div class="progress-container">
-            <div class="progress-bar" id="progress-bar"></div>
-        </div>
-        
-        <div id="upload-status" class="status-message"></div>
-    </div>
+<!-- 标签页导航 -->
+<div class="tabs">
+    <button class="tab-btn active" data-tab="users">用户管理</button>
+    <button class="tab-btn" data-tab="categories">分类管理</button>
+    <button class="tab-btn" data-tab="upload">图片上传</button>
+    <button class="tab-btn" data-tab="info">系统信息</button>
 </div>
 
-<div class="dashboard-container" style="margin-top: 20px;">
-    <!-- 系统信息 -->
-    <div class="dashboard-card" style="grid-column: 1 / -1;">
-        <h3 class="dashboard-title"><i class="fas fa-info-circle"></i> 系统信息</h3>
-        <div class="system-info">
-            <p>欢迎使用壁纸浏览网站管理面板！</p>
-            <p>在此面板中，您可以：</p>
-            <ul>
-                <li>添加新的图片分类</li>
-                <li>扫描现有文件夹以导入图片</li>
-                <li>上传新的图片到指定分类</li>
-                <li>删除不需要的分类（默认分类除外）</li>
-            </ul>
-            <p>注意事项：</p>
-            <ul>
-                <li>添加分类时，请确保文件夹路径有效</li>
-                <li>上传图片时，请确保文件格式为支持的图片格式（PNG, JPG, JPEG, GIF, BMP）</li>
-                <li>删除分类将不会删除实际的文件，但会从数据库中移除相关记录</li>
-            </ul>
+<!-- 标签页内容 -->
+<div class="tab-content">
+    <!-- 用户管理标签页 -->
+    <div id="users" class="tab-pane active">
+        <div class="dashboard-card">
+            <h3 class="dashboard-title"><i class="fas fa-users"></i> 用户管理</h3>
+            
+            <!-- 添加用户表单 -->
+            <form id="add-user-form" class="upload-form">
+                <div class="form-group">
+                    <label class="form-label" for="user-username">用户名</label>
+                    <input type="text" id="user-username" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="user-password">密码</label>
+                    <input type="password" id="user-password" class="form-input" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">添加用户</button>
+            </form>
+            
+            <div id="user-status" class="status-message"></div>
+            
+            <!-- 用户列表 -->
+            <div class="categories-list">
+                <h4>现有用户</h4>
+                {% for user in users %}
+                <div class="category-item">
+                    <div class="category-info">
+                        <div class="category-name">{{ user[1] }} ({{ user[3] }})</div>
+                        <div class="category-path">用户ID: {{ user[0] }}</div>
+                    </div>
+                    <div class="category-actions">
+                        {% if user[3] == 'user' %}
+                        <button class="btn btn-success permissions-btn" data-id="{{ user[0] }}" data-name="{{ user[1] }}">设置权限</button>
+                        <button class="btn btn-primary change-password-btn" data-id="{{ user[0] }}" data-name="{{ user[1] }}">修改密码</button>
+                        <button class="btn btn-danger delete-user-btn" data-id="{{ user[0] }}" data-name="{{ user[1] }}">删除</button>
+                        {% endif %}
+                        {% if user[3] == 'admin' %}
+                        <button class="btn btn-primary change-password-btn" data-id="{{ user[0] }}" data-name="{{ user[1] }}" data-is-admin="true">修改密码</button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
+
+    <!-- 分类管理标签页 -->
+    <div id="categories" class="tab-pane">
+        <div class="dashboard-card">
+            <h3 class="dashboard-title"><i class="fas fa-folder"></i> 分类管理</h3>
+            
+            <!-- 添加分类表单 -->
+            <form id="add-category-form" class="upload-form">
+                <div class="form-group">
+                    <label class="form-label" for="category-name">分类名称</label>
+                    <input type="text" id="category-name" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="category-path">文件夹路径</label>
+                    <input type="text" id="category-path" class="form-input" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">添加分类</button>
+            </form>
+            
+            <div id="category-status" class="status-message"></div>
+            
+            <!-- 分类列表 -->
+            <div class="categories-list">
+                <h4>现有分类</h4>
+                {% for category in categories %}
+                <div class="category-item">
+                    <div class="category-info">
+                        <div class="category-name">{{ category[1] }}</div>
+                        <div class="category-path">{{ category[1] }}</div>
+                    </div>
+                    <div class="category-actions">
+                        <button class="btn btn-success scan-btn" data-id="{{ category[0] }}">扫描文件夹</button>
+                        {% if category[1] != '默认分类' %}
+                        <button class="btn btn-danger delete-btn" data-id="{{ category[0] }}" data-name="{{ category[1] }}">删除</button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片上传标签页 -->
+    <div id="upload" class="tab-pane">
+        <div class="dashboard-card">
+            <h3 class="dashboard-title"><i class="fas fa-upload"></i> 图片上传</h3>
+            
+            <form id="upload-form" class="upload-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label class="form-label" for="upload-category">选择分类</label>
+                    <select id="upload-category" class="form-input" required>
+                        {% for category in categories %}
+                        <option value="{{ category[0] }}">{{ category[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">选择图片</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="upload-file" accept="image/*" multiple required>
+                        <span class="file-input-label"><i class="fas fa-file-image"></i> 选择文件</span>
+                    </div>
+                    <div id="file-name" class="file-name"></div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">上传图片</button>
+            </form>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            
+            <div id="upload-status" class="status-message"></div>
+        </div>
+    </div>
+
+    <!-- 系统信息标签页 -->
+    <div id="info" class="tab-pane">
+        <div class="dashboard-card">
+            <h3 class="dashboard-title"><i class="fas fa-info-circle"></i> 系统信息</h3>
+            <div class="system-info">
+                <p>您可以在此面板中：</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-plus-circle"></i> 添加新的图片分类</li>
+                    <li><i class="fas fa-search"></i> 扫描现有文件夹导入图片</li>
+                    <li><i class="fas fa-upload"></i> 上传新图片到指定分类</li>
+                    <li><i class="fas fa-trash-alt"></i> 删除不需要的分类（默认分类除外）</li>
+                </ul>
+                
+                <div class="important-notes">
+                    <p><strong>注意事项：</strong></p>
+                    <ul>
+                        <li>添加分类时，请确保文件夹路径有效</li>
+                        <li>支持的图片格式：PNG, JPG, JPEG, GIF, BMP</li>
+                        <li>删除分类不会删除实际文件，仅移除数据库记录</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+
+    </div>
+</div>
+</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // 标签页切换功能
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // 移除所有活动状态
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabPanes.forEach(pane => pane.classList.remove('active'));
+                
+                // 添加当前活动状态
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
         // 添加分类表单提交
         const addCategoryForm = document.getElementById('add-category-form');
         const categoryStatus = document.getElementById('category-status');
@@ -320,17 +526,8 @@
         addCategoryForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // 详细日志记录
-            console.log('开始处理添加分类请求');
-            console.log('表单元素:', addCategoryForm);
-            console.log('状态元素:', categoryStatus);
-            
             const name = document.getElementById('category-name').value;
             const folderPath = document.getElementById('category-path').value;
-            
-            console.log('分类名称:', name);
-            console.log('文件夹路径:', folderPath);
-            console.log('Axios版本:', axios ? '已加载' : '未加载');
             
             // 显示加载状态
             categoryStatus.textContent = '处理中...';
@@ -347,9 +544,6 @@
                 })
                 .then(response => {
                     const endTime = new Date().getTime();
-                    console.log('请求完成，耗时:', endTime - startTime, 'ms');
-                    console.log('响应状态码:', response.status);
-                    console.log('响应数据:', response.data);
                     
                     if (response.data.success) {
                         categoryStatus.textContent = response.data.message;
@@ -372,18 +566,7 @@
                     }
                 })
                 .catch(error => {
-                    const endTime = new Date().getTime();
-                    console.log('请求失败，耗时:', endTime - startTime, 'ms');
                     console.error('添加分类失败:', error);
-                    if (error.response) {
-                        console.log('错误响应状态码:', error.response.status);
-                        console.log('错误响应数据:', error.response.data);
-                    } else if (error.request) {
-                        console.log('无响应数据:', error.request);
-                    } else {
-                        console.log('请求配置错误:', error.message);
-                    }
-                    console.log('错误配置:', error.config);
                     
                     categoryStatus.textContent = '添加分类失败，请重试';
                     categoryStatus.classList.add('status-error');
@@ -404,24 +587,225 @@
             button.addEventListener('click', function() {
                 const categoryId = this.getAttribute('data-id');
                 const categoryName = this.getAttribute('data-name');
+                const btn = this;
                 
-                if (confirm(`确定要删除分类 "${categoryName}" 吗？`)) {
+                showConfirmDialog(`确定要删除分类 "${categoryName}" 吗？`, function() {
+                    // 显示加载状态
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
+                    btn.disabled = true;
+                    
                     axios.post(`/admin/delete_category/${categoryId}`)
                     .then(response => {
                         if (response.data.success) {
-                            alert(response.data.message);
-                            window.location.reload();
+                            showToast(response.data.message);
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
                         } else {
-                            alert(response.data.message);
+                            showToast(response.data.message);
                         }
                     })
                     .catch(error => {
                         console.error('删除分类失败:', error);
-                        alert('删除分类失败，请重试');
+                        showToast('删除分类失败，请重试');
+                    })
+                    .finally(() => {
+                        // 恢复按钮状态
+                        btn.innerHTML = '<i class="fas fa-trash-alt"></i> 删除';
+                        btn.disabled = false;
                     });
-                }
+                });
             });
         });
+        
+        // 显示临时提示函数
+        function showToast(message, duration = 3000) {
+            // 检查是否已存在toast元素
+            let toast = document.getElementById('custom-toast');
+            if (!toast) {
+                // 创建toast元素
+                toast = document.createElement('div');
+                toast.id = 'custom-toast';
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background-color: rgba(0, 0, 0, 0.7);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    z-index: 9999;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                    pointer-events: none;
+                    white-space: nowrap;
+                `;
+                document.body.appendChild(toast);
+            }
+            
+            // 清除之前的定时器（如果有）
+            if (toast.timeout) {
+                clearTimeout(toast.timeout);
+            }
+            
+            // 设置消息并显示
+            toast.textContent = message;
+            // 强制重绘
+            void toast.offsetWidth;
+            toast.style.opacity = '1';
+            
+            // 设置定时器隐藏
+            toast.timeout = setTimeout(() => {
+                toast.style.opacity = '0';
+            }, duration);
+        }
+        
+        // 显示确认对话框函数
+        function showConfirmDialog(message, onConfirm, onCancel = null) {
+            // 检查是否已存在对话框元素
+            let confirmDialog = document.getElementById('custom-confirm-dialog');
+            if (confirmDialog) {
+                document.body.removeChild(confirmDialog);
+            }
+            
+            // 创建对话框背景
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.id = 'custom-confirm-dialog';
+            dialogOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            // 创建对话框内容
+            const dialogContent = document.createElement('div');
+            dialogContent.style.cssText = `
+                background-color: white;
+                border-radius: 8px;
+                padding: 20px;
+                width: 90%;
+                max-width: 400px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                transform: translateY(-20px);
+                transition: transform 0.3s ease;
+            `;
+            
+            // 创建消息文本
+            const dialogMessage = document.createElement('p');
+            dialogMessage.textContent = message;
+            dialogMessage.style.cssText = `
+                margin: 0 0 20px 0;
+                color: #333;
+                font-size: 16px;
+                line-height: 1.5;
+            `;
+            
+            // 创建按钮容器
+            const dialogButtons = document.createElement('div');
+            dialogButtons.style.cssText = `
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            `;
+            
+            // 创建取消按钮
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = '取消';
+            cancelButton.style.cssText = `
+                padding: 8px 16px;
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                color: #495057;
+                transition: background-color 0.2s ease;
+            `;
+            cancelButton.addEventListener('mouseover', function() {
+                this.style.backgroundColor = '#e9ecef';
+            });
+            cancelButton.addEventListener('mouseout', function() {
+                this.style.backgroundColor = '#f8f9fa';
+            });
+            
+            // 创建确认按钮
+            const confirmButton = document.createElement('button');
+            confirmButton.textContent = '确认';
+            confirmButton.style.cssText = `
+                padding: 8px 16px;
+                background-color: #007bff;
+                border: 1px solid #007bff;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                color: white;
+                transition: background-color 0.2s ease;
+            `;
+            confirmButton.addEventListener('mouseover', function() {
+                this.style.backgroundColor = '#0056b3';
+            });
+            confirmButton.addEventListener('mouseout', function() {
+                this.style.backgroundColor = '#007bff';
+            });
+            
+            // 组装对话框
+            dialogButtons.appendChild(cancelButton);
+            dialogButtons.appendChild(confirmButton);
+            dialogContent.appendChild(dialogMessage);
+            dialogContent.appendChild(dialogButtons);
+            dialogOverlay.appendChild(dialogContent);
+            document.body.appendChild(dialogOverlay);
+            
+            // 触发动画
+            setTimeout(() => {
+                dialogOverlay.style.opacity = '1';
+                dialogContent.style.transform = 'translateY(0)';
+            }, 10);
+            
+            // 关闭对话框函数
+            function closeDialog() {
+                dialogOverlay.style.opacity = '0';
+                dialogContent.style.transform = 'translateY(-20px)';
+                setTimeout(() => {
+                    document.body.removeChild(dialogOverlay);
+                }, 300);
+            }
+            
+            // 绑定按钮事件
+            cancelButton.addEventListener('click', function() {
+                closeDialog();
+                if (typeof onCancel === 'function') {
+                    onCancel();
+                }
+            });
+            
+            confirmButton.addEventListener('click', function() {
+                closeDialog();
+                if (typeof onConfirm === 'function') {
+                    onConfirm();
+                }
+            });
+            
+            // 点击背景关闭对话框
+            dialogOverlay.addEventListener('click', function(e) {
+                if (e.target === dialogOverlay) {
+                    closeDialog();
+                    if (typeof onCancel === 'function') {
+                        onCancel();
+                    }
+                }
+            });
+        }
         
         // 扫描文件夹按钮
         const scanButtons = document.querySelectorAll('.scan-btn');
@@ -436,14 +820,14 @@
                 axios.post(`/admin/scan_folder/${categoryId}`)
                 .then(response => {
                     if (response.data.success) {
-                        alert(response.data.message);
+                        showToast(response.data.message);
                     } else {
-                        alert(response.data.message);
+                        showToast(response.data.message);
                     }
                 })
                 .catch(error => {
                     console.error('扫描文件夹失败:', error);
-                    alert('扫描文件夹失败，请重试');
+                    showToast('扫描文件夹失败，请重试');
                 })
                 .finally(() => {
                     // 恢复按钮状态
@@ -474,6 +858,451 @@
             }
         });
         
+        // 添加用户表单提交
+        const addUserForm = document.getElementById('add-user-form');
+        const userStatus = document.getElementById('user-status');
+        
+        addUserForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('user-username').value;
+            const password = document.getElementById('user-password').value;
+            
+            axios.post('/admin/add_user', {
+                username: username,
+                password: password
+            }, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => {
+                userStatus.textContent = response.data.message;
+                if (response.data.success) {
+                    userStatus.classList.add('status-success');
+                    userStatus.classList.remove('status-error');
+                    addUserForm.reset();
+                    // 刷新页面以显示新用户
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    userStatus.classList.add('status-error');
+                    userStatus.classList.remove('status-success');
+                }
+                userStatus.style.display = 'block';
+                
+                setTimeout(() => {
+                    userStatus.style.display = 'none';
+                }, 3000);
+            })
+            .catch(error => {
+                console.error('添加用户失败:', error);
+                userStatus.textContent = '添加用户失败';
+                userStatus.classList.add('status-error');
+                userStatus.classList.remove('status-success');
+                userStatus.style.display = 'block';
+                
+                setTimeout(() => {
+                    userStatus.style.display = 'none';
+                }, 3000);
+            });
+        });
+        
+        // 删除用户
+        document.querySelectorAll('.delete-user-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                const userName = this.getAttribute('data-name');
+                
+                if (confirm(`确定要删除用户 "${userName}" 吗？`)) {
+                    axios.post(`/admin/delete_user/${userId}`)
+                    .then(response => {
+                        userStatus.textContent = response.data.message;
+                        if (response.data.success) {
+                            userStatus.classList.add('status-success');
+                            userStatus.classList.remove('status-error');
+                            // 刷新页面
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            userStatus.classList.add('status-error');
+                            userStatus.classList.remove('status-success');
+                        }
+                        userStatus.style.display = 'block';
+                        
+                        setTimeout(() => {
+                            userStatus.style.display = 'none';
+                        }, 3000);
+                    })
+                    .catch(error => {
+                        console.error('删除用户失败:', error);
+                        userStatus.textContent = '删除用户失败';
+                        userStatus.classList.add('status-error');
+                        userStatus.classList.remove('status-success');
+                        userStatus.style.display = 'block';
+                        
+                        setTimeout(() => {
+                            userStatus.style.display = 'none';
+                        }, 3000);
+                    });
+                }
+            });
+        });
+        
+        // 修改用户密码
+        document.querySelectorAll('.change-password-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                const userName = this.getAttribute('data-name');
+                const isAdmin = this.getAttribute('data-is-admin') === 'true';
+                
+                // 创建密码修改弹窗
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                modal.style.display = 'flex';
+                modal.style.justifyContent = 'center';
+                modal.style.alignItems = 'center';
+                modal.style.zIndex = '1000';
+                modal.style.transition = 'opacity 0.3s ease';
+                
+                const modalContent = document.createElement('div');
+                modalContent.className = 'modal-content';
+                modalContent.style.backgroundColor = 'white';
+                modalContent.style.padding = '20px';
+                modalContent.style.borderRadius = '8px';
+                modalContent.style.width = '90%';
+                modalContent.style.maxWidth = '500px';
+                modalContent.style.transform = 'scale(0.9)';
+                modalContent.style.transition = 'transform 0.3s ease';
+                
+                // 延迟添加动画效果
+                setTimeout(() => {
+                    modal.style.opacity = '1';
+                    modalContent.style.transform = 'scale(1)';
+                }, 10);
+                
+                // 构建模态框内容，根据是否为管理员决定是否显示当前密码字段
+                let modalHTML = `
+                    <h3 style="margin-top: 0; margin-bottom: 20px;">修改用户 "${userName}" 的密码</h3>
+                `;
+                
+                if (isAdmin) {
+                    modalHTML += `
+                        <div class="form-group">
+                            <label class="form-label" for="current-password">当前密码</label>
+                            <input type="password" id="current-password" class="form-input" required placeholder="请输入当前密码">
+                        </div>
+                    `;
+                }
+                
+                modalHTML += `
+                    <div class="form-group">
+                        <label class="form-label" for="new-password">新密码</label>
+                        <input type="password" id="new-password" class="form-input" required placeholder="请输入新密码">
+                        <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">密码长度至少8位</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="confirm-password">确认密码</label>
+                        <input type="password" id="confirm-password" class="form-input" required placeholder="请再次输入新密码">
+                        <div id="password-match-message" style="color: #dc3545; font-size: 12px; margin-top: 5px; display: none;">密码不匹配</div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button id="cancel-password" class="btn">取消</button>
+                        <button id="save-password" class="btn btn-primary">保存</button>
+                    </div>
+                `;
+                
+                modalContent.innerHTML = modalHTML;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // 获取表单元素
+                const newPassword = document.getElementById('new-password');
+                const confirmPassword = document.getElementById('confirm-password');
+                const passwordMatchMessage = document.getElementById('password-match-message');
+                const currentPassword = isAdmin ? document.getElementById('current-password') : null;
+                
+                // 密码匹配验证
+                confirmPassword.addEventListener('input', function() {
+                    if (newPassword.value && confirmPassword.value && newPassword.value !== confirmPassword.value) {
+                        passwordMatchMessage.style.display = 'block';
+                    } else {
+                        passwordMatchMessage.style.display = 'none';
+                    }
+                });
+                
+                // 取消按钮
+                document.getElementById('cancel-password').addEventListener('click', function() {
+                    modal.style.opacity = '0';
+                    modalContent.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        document.body.removeChild(modal);
+                    }, 300);
+                });
+                
+                // 保存按钮
+                document.getElementById('save-password').addEventListener('click', function() {
+                    // 表单验证
+                    if (isAdmin && !currentPassword.value) {
+                        userStatus.textContent = '请输入当前密码';
+                        userStatus.classList.add('status-error');
+                        userStatus.classList.remove('status-success');
+                        userStatus.style.display = 'block';
+                        setTimeout(() => userStatus.style.display = 'none', 3000);
+                        return;
+                    }
+                    
+                    if (!newPassword.value) {
+                        userStatus.textContent = '请输入新密码';
+                        userStatus.classList.add('status-error');
+                        userStatus.classList.remove('status-success');
+                        userStatus.style.display = 'block';
+                        setTimeout(() => userStatus.style.display = 'none', 3000);
+                        return;
+                    }
+                    
+                    if (newPassword.value.length < 8) {
+                        userStatus.textContent = '密码长度至少8位';
+                        userStatus.classList.add('status-error');
+                        userStatus.classList.remove('status-success');
+                        userStatus.style.display = 'block';
+                        setTimeout(() => userStatus.style.display = 'none', 3000);
+                        return;
+                    }
+                    
+                    if (newPassword.value !== confirmPassword.value) {
+                        userStatus.textContent = '两次输入的密码不匹配';
+                        userStatus.classList.add('status-error');
+                        userStatus.classList.remove('status-success');
+                        userStatus.style.display = 'block';
+                        setTimeout(() => userStatus.style.display = 'none', 3000);
+                        return;
+                    }
+                    
+                    // 根据用户类型选择不同的API接口
+                    let apiUrl = '/admin/change_user_password';
+                    let postData = {
+                        user_id: userId,
+                        new_password: newPassword.value
+                    };
+                    
+                    if (isAdmin) {
+                        apiUrl = '/admin/change_admin_password';
+                        postData = {
+                            current_password: currentPassword.value,
+                            new_password: newPassword.value
+                        };
+                    }
+                    
+                    // 提交密码修改请求
+                    axios.post(apiUrl, postData)
+                    .then(response => {
+                        userStatus.textContent = response.data.message;
+                        if (response.data.success) {
+                            userStatus.classList.add('status-success');
+                            userStatus.classList.remove('status-error');
+                            
+                            // 关闭模态框
+                            modal.style.opacity = '0';
+                            modalContent.style.transform = 'scale(0.9)';
+                            setTimeout(() => {
+                                document.body.removeChild(modal);
+                            }, 300);
+                        } else {
+                            userStatus.classList.add('status-error');
+                            userStatus.classList.remove('status-success');
+                        }
+                        userStatus.style.display = 'block';
+                        
+                        setTimeout(() => {
+                            userStatus.style.display = 'none';
+                        }, 3000);
+                    })
+                    .catch(error => {
+                        console.error('修改密码失败:', error);
+                        userStatus.textContent = '修改密码失败';
+                        userStatus.classList.add('status-error');
+                        userStatus.classList.remove('status-success');
+                        userStatus.style.display = 'block';
+                        
+                        setTimeout(() => {
+                            userStatus.style.display = 'none';
+                        }, 3000);
+                    });
+                });
+                
+                // 点击模态框外部关闭
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.style.opacity = '0';
+                        modalContent.style.transform = 'scale(0.9)';
+                        setTimeout(() => {
+                            document.body.removeChild(modal);
+                        }, 300);
+                    }
+                });
+            });
+        });
+        
+        // 设置用户权限
+        document.querySelectorAll('.permissions-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                const userName = this.getAttribute('data-name');
+                
+                // 创建权限设置弹窗
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                modal.style.display = 'flex';
+                modal.style.justifyContent = 'center';
+                modal.style.alignItems = 'center';
+                modal.style.zIndex = '1000';
+                
+                const modalContent = document.createElement('div');
+                modalContent.style.backgroundColor = 'white';
+                modalContent.style.padding = '20px';
+                modalContent.style.borderRadius = '8px';
+                modalContent.style.width = '90%';
+                modalContent.style.maxWidth = '500px';
+                modalContent.style.maxHeight = '80vh';
+                modalContent.style.overflowY = 'auto';
+                
+                modalContent.innerHTML = `
+                    <h3 style="margin-top: 0;">设置用户 "${userName}" 的分类权限</h3>
+                    <div id="permissions-content"></div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button id="close-modal" class="btn">取消</button>
+                        <button id="save-permissions" class="btn btn-primary">保存</button>
+                    </div>
+                `;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // 获取现有权限
+                axios.get(`/admin/get_user_permissions/${userId}`)
+                .then(response => {
+                    const permissions = response.data.permissions;
+                    const permissionsContent = document.getElementById('permissions-content');
+                    
+                    // 创建分类复选框列表
+                    permissionsContent.innerHTML = `
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <input type="checkbox" id="select-all-categories" style="margin: 0;">
+                                <span>全选</span>
+                            </label>
+                        </div>
+                    `;
+                    
+                    // 请求所有分类数据
+                    axios.get('/api/categories')
+                    .then(categoriesResponse => {
+                        const categories = categoriesResponse.data.categories;
+                        
+                        categories.forEach(category => {
+                            // 确保category[0]是整数类型
+                            const categoryId = parseInt(category[0]);
+                            // 检查是否在权限列表中
+                            const isChecked = permissions.includes(categoryId);
+                            permissionsContent.innerHTML += `
+                                <div style="margin-bottom: 5px;">
+                                    <label style="display: flex; align-items: center; gap: 5px;">
+                                        <input type="checkbox" name="category_ids" value="${categoryId}" style="margin: 0;" ${isChecked ? 'checked' : ''}>
+                                        <span>${category[1]}</span>
+                                    </label>
+                                </div>
+                            `;
+                        });
+                    })
+                    .catch(error => {
+                        console.error('获取分类失败:', error);
+                        permissionsContent.innerHTML += '<p style="color: red;">获取分类失败</p>';
+                    });
+                    
+                    // 全选功能
+                    document.getElementById('select-all-categories').addEventListener('change', function() {
+                        const checkboxes = document.querySelectorAll('input[name="category_ids"]');
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = this.checked;
+                        });
+                    });
+                    
+                    // 保存权限
+                    document.getElementById('save-permissions').addEventListener('click', function() {
+                        const selectedCategories = Array.from(document.querySelectorAll('input[name="category_ids"]:checked'))
+                            .map(checkbox => checkbox.value);
+                        
+                        // 创建URLSearchParams对象来正确序列化表单数据
+                        const formData = new URLSearchParams();
+                        selectedCategories.forEach(id => {
+                            formData.append('category_ids[]', id);
+                        });
+                        
+                        axios.post(`/admin/set_user_permissions/${userId}`, formData, {
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            }
+                        })
+                        .then(response => {
+                            userStatus.textContent = response.data.message;
+                            if (response.data.success) {
+                                userStatus.classList.add('status-success');
+                                userStatus.classList.remove('status-error');
+                            } else {
+                                userStatus.classList.add('status-error');
+                                userStatus.classList.remove('status-success');
+                            }
+                            userStatus.style.display = 'block';
+                            
+                            setTimeout(() => {
+                                userStatus.style.display = 'none';
+                            }, 3000);
+                            
+                            // 关闭弹窗
+                            document.body.removeChild(modal);
+                        })
+                        .catch(error => {
+                            console.error('设置权限失败:', error);
+                            userStatus.textContent = '设置权限失败';
+                            userStatus.classList.add('status-error');
+                            userStatus.classList.remove('status-success');
+                            userStatus.style.display = 'block';
+                            
+                            setTimeout(() => {
+                                userStatus.style.display = 'none';
+                            }, 3000);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('获取权限失败:', error);
+                    permissionsContent.innerHTML = '<p style="color: red;">获取权限失败</p>';
+                });
+                
+                // 关闭弹窗
+                document.getElementById('close-modal').addEventListener('click', function() {
+                    document.body.removeChild(modal);
+                });
+            });
+        });
+        
         // 上传表单提交
         uploadForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -482,7 +1311,7 @@
             const files = uploadFile.files;
             
             if (files.length === 0) {
-                alert('请选择要上传的图片');
+                showToast('请选择要上传的图片');
                 return;
             }
             

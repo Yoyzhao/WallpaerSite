@@ -48,7 +48,20 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
+            password TEXT NOT NULL,
+            user_type TEXT NOT NULL DEFAULT 'user'  -- user或admin
+        )
+    ''')
+    
+    # 创建用户分类权限表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_category_permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            category_id INTEGER NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (category_id) REFERENCES categories (id),
+            UNIQUE (user_id, category_id)
         )
     ''')
     
@@ -60,6 +73,7 @@ def init_db():
             filepath TEXT NOT NULL,
             category_id INTEGER,
             upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            sort_index INTEGER,
             FOREIGN KEY (category_id) REFERENCES categories (id)
         )
     ''')
@@ -68,7 +82,7 @@ def init_db():
     cursor.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cursor.fetchone():
         hashed_password = hashlib.sha256('admin'.encode()).hexdigest()
-        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", ('admin', hashed_password))
+        cursor.execute("INSERT INTO users (username, password, user_type) VALUES (?, ?, ?)", ('admin', hashed_password, 'admin'))
     
     # 创建默认分类
     cursor.execute("SELECT * FROM categories WHERE name = '默认分类'")
@@ -89,6 +103,138 @@ def allowed_file(filename):
 def is_admin_logged_in():
     return 'admin_logged_in' in session and session['admin_logged_in']
 
+# 检查普通用户是否已登录
+def is_user_logged_in():
+    return 'user_logged_in' in session and session['user_logged_in']
+
+# 获取登录的用户名
+def get_current_username():
+    if is_admin_logged_in():
+        return session['admin_username']
+    elif is_user_logged_in():
+        return session['user_username']
+    return None
+
+# 获取用户可访问的分类
+def get_user_accessible_categories(user_id=None):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    # 如果没有提供用户ID，获取当前登录用户ID
+    if user_id is None and is_user_logged_in():
+        cursor.execute("SELECT id FROM users WHERE username = ?", (session['user_username'],))
+        user = cursor.fetchone()
+        if user:
+            user_id = user[0]
+    
+    # 默认分类始终对所有用户开放
+    categories = []
+    
+    # 如果是管理员或没有登录的用户，只显示默认分类
+    if is_admin_logged_in():
+        # 管理员可以访问所有分类
+        cursor.execute("SELECT id, name FROM categories")
+        categories = cursor.fetchall()
+    elif user_id:
+        # 登录用户可以访问默认分类和授权的分类
+        cursor.execute('''
+            SELECT c.id, c.name FROM categories c
+            WHERE c.name = '默认分类' OR EXISTS (
+                SELECT 1 FROM user_category_permissions
+                WHERE user_id = ? AND category_id = c.id
+            )
+        ''', (user_id,))
+        categories = cursor.fetchall()
+    else:
+        # 未登录用户只能访问默认分类
+        cursor.execute("SELECT id, name FROM categories WHERE name = '默认分类'")
+        categories = cursor.fetchall()
+    
+    conn.close()
+    return categories
+
+# 获取用户信息
+def get_user_by_username(username):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, password, user_type FROM users WHERE username = ?", (username,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
+# 获取所有用户（管理员用）
+def get_all_users():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, '', user_type FROM users")
+    users = cursor.fetchall()
+    conn.close()
+    return users
+
+# 添加用户（管理员用）
+def add_user(username, password, user_type='user'):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        cursor.execute("INSERT INTO users (username, password, user_type) VALUES (?, ?, ?)", (username, hashed_password, user_type))
+        conn.commit()
+        user_id = cursor.lastrowid
+        return True, user_id
+    except sqlite3.IntegrityError:
+        return False, "用户名已存在"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        conn.close()
+
+# 删除用户（管理员用）
+def delete_user(user_id):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        # 先删除用户的权限
+        cursor.execute("DELETE FROM user_category_permissions WHERE user_id = ?", (user_id,))
+        # 再删除用户
+        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+        return True, "用户删除成功"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        conn.close()
+
+# 设置用户分类权限（管理员用）
+def set_user_category_permissions(user_id, category_ids):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        # 先删除该用户的所有权限
+        cursor.execute("DELETE FROM user_category_permissions WHERE user_id = ?", (user_id,))
+        
+        # 再添加新的权限
+        for category_id in category_ids:
+            cursor.execute("INSERT INTO user_category_permissions (user_id, category_id) VALUES (?, ?)", (user_id, category_id))
+        
+        conn.commit()
+        return True, "权限设置成功"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        conn.close()
+
+# 获取用户的分类权限
+def get_user_category_permissions(user_id):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT category_id FROM user_category_permissions WHERE user_id = ?", (user_id,))
+    permissions = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return permissions
+
 # 获取所有分类
 def get_categories():
     conn = sqlite3.connect(DATABASE)
@@ -99,27 +245,30 @@ def get_categories():
     return categories
 
 # 获取指定分类的图片
-def get_images_by_category(category_id, page=1, per_page=20, search_term=''):
+def get_images_by_category(category_id, page=1, per_page=20, search_term='', sort_direction='desc'):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     
     offset = (page - 1) * per_page
     
+    # 根据排序方向决定ORDER BY子句
+    order_by = "ORDER BY sort_index ASC" if sort_direction == 'asc' else "ORDER BY sort_index DESC"
+    
     if search_term:
-        query = """
-            SELECT id, filename, filepath, upload_time 
+        query = f"""
+            SELECT id, filename, filepath, upload_time, sort_index
             FROM images 
             WHERE category_id = ? AND filename LIKE ? 
-            ORDER BY upload_time DESC 
+            {order_by} 
             LIMIT ? OFFSET ?
         """
         cursor.execute(query, (category_id, f'%{search_term}%', per_page, offset))
     else:
-        query = """
-            SELECT id, filename, filepath, upload_time 
+        query = f"""
+            SELECT id, filename, filepath, upload_time, sort_index
             FROM images 
             WHERE category_id = ? 
-            ORDER BY upload_time DESC 
+            {order_by} 
             LIMIT ? OFFSET ?
         """
         cursor.execute(query, (category_id, per_page, offset))
@@ -158,6 +307,37 @@ def get_image_detail(image_id):
     conn.close()
     return image
 
+# 为指定分类的图片更新排序索引
+def update_sort_index_for_category(category_id, cursor=None, conn=None):
+    # 如果没有提供连接和游标，创建新的
+    if conn is None or cursor is None:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        need_commit = True
+    else:
+        need_commit = False
+    
+    # 按upload_time降序获取该分类的所有图片
+    cursor.execute("""
+        SELECT id FROM images 
+        WHERE category_id = ? 
+        ORDER BY upload_time DESC
+    """, (category_id,))
+    
+    images = cursor.fetchall()
+    
+    # 更新每张图片的sort_index
+    for index, (image_id,) in enumerate(images, 1):
+        cursor.execute(
+            "UPDATE images SET sort_index = ? WHERE id = ?",
+            (index, image_id)
+        )
+    
+    # 只有在需要时才提交和关闭连接
+    if need_commit:
+        conn.commit()
+        conn.close()
+
 # 扫描文件夹并更新数据库
 def scan_folder_and_update_db(folder_path, category_id, cursor=None, conn=None):
     # 如果没有提供连接和游标，创建新的
@@ -192,6 +372,9 @@ def scan_folder_and_update_db(folder_path, category_id, cursor=None, conn=None):
         if file_path not in folder_files:
             cursor.execute("DELETE FROM images WHERE filepath = ?", (file_path,))
     
+    # 更新排序索引
+    update_sort_index_for_category(category_id, cursor, conn)
+    
     # 只有在需要时才提交和关闭连接
     if need_commit:
         conn.commit()
@@ -225,6 +408,9 @@ def upload_image():
         uploaded_count = 0
         
         # 保存上传的文件
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        
         for file in files:
             if file and allowed_file(file.filename):
                 # 生成唯一文件名
@@ -243,17 +429,19 @@ def upload_image():
                 file.save(filepath)
                 
                 # 更新数据库
-                conn = sqlite3.connect(DATABASE)
-                cursor = conn.cursor()
                 cursor.execute(
                     "INSERT INTO images (filename, filepath, category_id) VALUES (?, ?, ?)",
                     (filename, filepath, category_id)
                 )
-                conn.commit()
-                conn.close()
                 
                 uploaded_count += 1
                 
+        conn.commit()
+        conn.close()
+        
+        # 更新该分类的排序索引
+        update_sort_index_for_category(category_id)
+        
         if uploaded_count == 0:
             return jsonify({'success': False, 'message': '没有有效的图片文件被上传'})
             
@@ -282,11 +470,34 @@ def get_category_images(category_id):
         # 检查分类是否存在
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM categories WHERE id = ?", (category_id,))
-        if not cursor.fetchone():
+        cursor.execute("SELECT id, name FROM categories WHERE id = ?", (category_id,))
+        category = cursor.fetchone()
+        if not category:
             conn.close()
             return jsonify({'success': False, 'message': '分类不存在'})
         conn.close()
+        
+        # 检查权限
+        # 1. 如果是默认分类，所有人都可以访问
+        if category[1] == '默认分类':
+            pass
+        # 2. 检查用户是否登录
+        elif not is_user_logged_in() and not is_admin_logged_in():
+            return jsonify({'success': False, 'message': '请先登录'})
+        # 3. 管理员可以访问所有分类
+        elif is_admin_logged_in():
+            pass
+        # 4. 检查普通用户是否有权限访问该分类
+        else:
+            accessible_categories = get_user_accessible_categories()
+            has_permission = False
+            for cat in accessible_categories:
+                if cat[0] == category_id:
+                    has_permission = True
+                    break
+            
+            if not has_permission:
+                return jsonify({'success': False, 'message': '您没有权限访问该分类'})
         
         # 获取图片数据
         result = get_images_by_category(category_id, page, per_page, search_term)
@@ -327,7 +538,8 @@ def get_category_images(category_id):
                     'id': img[0],
                     'filename': img[1],
                     'filepath': image_url,
-                    'upload_time': upload_time
+                    'upload_time': upload_time,
+                    'sort_index': img[4]  # 添加sort_index字段
                 })
             
         return jsonify({
@@ -351,6 +563,22 @@ def get_category_images(category_id):
 #         return send_from_directory('../static/images', 'error.webp'), 404
 
 # 分类管理相关路由已在下方统一实现
+
+# 获取所有分类API
+@app.route('/api/categories')
+def api_categories():
+    # 只有管理员才能获取所有分类
+    if not is_admin_logged_in():
+        return jsonify({'success': False, 'message': '需要管理员权限'})
+    
+    try:
+        categories = get_categories()
+        return jsonify({
+            'success': True,
+            'categories': categories
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取分类失败: {str(e)}'})
 
 # 删除分类API
 @app.route('/admin/delete_category/<int:category_id>', methods=['POST'])
@@ -386,10 +614,55 @@ def delete_category(category_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'删除失败: {str(e)}'})
 
+# 修改用户密码函数
+def change_user_password(user_id, new_password):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        # 哈希新密码
+        hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
+        # 更新密码
+        cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user_id))
+        conn.commit()
+        # 检查是否有记录被更新
+        if cursor.rowcount > 0:
+            return True, "密码修改成功"
+        else:
+            return False, "用户不存在"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        conn.close()
+
+
+def verify_admin_password(username, current_password):
+    """验证管理员密码"""
+    try:
+        # 连接数据库
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        
+        # 查询管理员用户
+        cursor.execute('SELECT password FROM users WHERE username = ? AND user_type = ?', (username, 'admin'))
+        result = cursor.fetchone()
+        
+        # 关闭连接
+        conn.close()
+        
+        # 验证密码
+        if result and result[0] == hashlib.sha256(current_password.encode()).hexdigest():
+            return True
+        return False
+    except Exception as e:
+        print(f"验证管理员密码失败: {str(e)}")
+        return False
+
+
 # 首页路由
 @app.route('/')
 def index():
-    categories = get_categories()
+    categories = get_user_accessible_categories()
     return render_template('index.html', categories=categories)
 
 # 测试页脚对齐路由
@@ -403,19 +676,68 @@ def category(category_id):
     # 获取分类信息
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM categories WHERE id = ?", (category_id,))
+    cursor.execute("SELECT id, name FROM categories WHERE id = ?", (category_id,))
     category = cursor.fetchone()
     conn.close()
     
     if not category:
         return "分类不存在", 404
-
-    return render_template('category.html', category_id=category_id, category_name=category[0])
+    
+    # 检查权限
+    # 1. 如果是默认分类，所有人都可以访问
+    if category[1] == '默认分类':
+        return render_template('category.html', category_id=category_id, category_name=category[1])
+    
+    # 2. 检查用户是否登录
+    if not is_user_logged_in() and not is_admin_logged_in():
+        # 如果不是默认分类，需要登录才能访问
+        return redirect(url_for('user_login'))
+    
+    # 3. 管理员可以访问所有分类
+    if is_admin_logged_in():
+        return render_template('category.html', category_id=category_id, category_name=category[1])
+    
+    # 4. 检查普通用户是否有权限访问该分类
+    accessible_categories = get_user_accessible_categories()
+    for cat in accessible_categories:
+        if cat[0] == category_id:
+            return render_template('category.html', category_id=category_id, category_name=category[1])
+    
+    # 没有权限访问该分类
+    return "您没有权限访问该分类", 403
 
 # 测试添加分类功能的路由
 @app.route('/test/add_category')
 def test_add_category():
     return render_template('test_add_category.html')
+
+# 普通用户登录路由
+@app.route('/user/login', methods=['GET', 'POST'])
+def user_login():
+    if is_user_logged_in():
+        return redirect(url_for('index'))
+        
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = get_user_by_username(username)
+        
+        if user and user[2] == hashlib.sha256(password.encode()).hexdigest() and user[3] == 'user':
+            session['user_logged_in'] = True
+            session['user_username'] = username
+            return redirect(url_for('index'))
+        else:
+            return render_template('user_login.html', error='用户名或密码错误')
+            
+    return render_template('user_login.html')
+
+# 普通用户注销路由
+@app.route('/user/logout')
+def user_logout():
+    session.pop('user_logged_in', None)
+    session.pop('user_username', None)
+    return redirect(url_for('index'))
 
 # 管理员登录路由
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -427,13 +749,9 @@ def admin_login():
         username = request.form['username']
         password = request.form['password']
         
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
-        user = cursor.fetchone()
-        conn.close()
+        user = get_user_by_username(username)
         
-        if user and hashlib.sha256(password.encode()).hexdigest() == user[0]:
+        if user and user[2] == hashlib.sha256(password.encode()).hexdigest() and user[3] == 'admin':
             session['admin_logged_in'] = True
             session['admin_username'] = username
             return redirect(url_for('admin_dashboard'))
@@ -456,7 +774,172 @@ def admin_dashboard():
         return redirect(url_for('admin_login'))
         
     categories = get_categories()
-    return render_template('admin_dashboard.html', categories=categories)
+    users = get_all_users()
+    return render_template('admin_dashboard.html', categories=categories, users=users)
+
+# 添加用户路由（管理员用）
+@app.route('/admin/add_user', methods=['POST'])
+def admin_add_user():
+    if not is_admin_logged_in():
+        return jsonify({'success': False, 'message': '请先登录'})
+        
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': '用户名和密码不能为空'})
+        
+    success, result = add_user(username, password)
+    if success:
+        return jsonify({'success': True, 'message': '用户添加成功'})
+    else:
+        return jsonify({'success': False, 'message': result})
+
+# 删除用户路由（管理员用）
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+def admin_delete_user(user_id):
+    if not is_admin_logged_in():
+        return jsonify({'success': False, 'message': '请先登录'})
+        
+    # 不允许删除管理员账户
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_type FROM users WHERE id = ?", (user_id,))
+    user_type = cursor.fetchone()
+    conn.close()
+    
+    if user_type and user_type[0] == 'admin':
+        return jsonify({'success': False, 'message': '不允许删除管理员账户'})
+        
+    success, message = delete_user(user_id)
+    if success:
+        return jsonify({'success': True, 'message': message})
+    else:
+        return jsonify({'success': False, 'message': message})
+
+
+@app.route('/admin/change_admin_password', methods=['POST'])
+def admin_change_admin_password():
+    """管理员修改自己的密码"""
+    try:
+        if not is_admin_logged_in():
+            return jsonify({'success': False, 'message': '请先登录'})
+        
+        # 获取当前登录的管理员用户信息
+        username = session.get('admin_username')
+        
+        # 获取请求数据
+        try:
+            data = request.get_json()
+            if data:
+                current_password = data.get('current_password')
+                new_password = data.get('new_password')
+            else:
+                current_password = request.form.get('current_password')
+                new_password = request.form.get('new_password')
+        except Exception as e:
+            current_password = request.form.get('current_password')
+            new_password = request.form.get('new_password')
+        
+        # 验证数据完整性
+        if not current_password or not new_password:
+            return jsonify({'success': False, 'message': '请填写完整的密码信息'})
+        
+        # 验证密码长度
+        if len(new_password) < 8:
+            return jsonify({'success': False, 'message': '新密码长度至少为8位'})
+        
+        # 验证当前密码是否正确
+        if not verify_admin_password(username, current_password):
+            return jsonify({'success': False, 'message': '当前密码不正确'})
+        
+        # 获取管理员用户ID
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM users WHERE username = ? AND user_type = ?', (username, 'admin'))
+        user_id = cursor.fetchone()[0]
+        conn.close()
+        
+        # 修改密码
+        success, message = change_user_password(user_id, new_password)
+        
+        if success:
+            # 可以选择强制管理员重新登录，但这里不实现这个功能
+            return jsonify({'success': True, 'message': '管理员密码修改成功'})
+        else:
+            return jsonify({'success': False, 'message': message})
+            
+    except Exception as e:
+        print(f"管理员修改密码出错: {str(e)}")
+        return jsonify({'success': False, 'message': f'修改密码失败: {str(e)}'})
+
+# 设置用户分类权限路由（管理员用）
+@app.route('/admin/set_user_permissions/<int:user_id>', methods=['POST'])
+def admin_set_user_permissions(user_id):
+    if not is_admin_logged_in():
+        return jsonify({'success': False, 'message': '请先登录'})
+        
+    category_ids = request.form.getlist('category_ids[]')
+    category_ids = [int(id) for id in category_ids] if category_ids else []
+    
+    success, message = set_user_category_permissions(user_id, category_ids)
+    if success:
+        return jsonify({'success': True, 'message': message})
+    else:
+        return jsonify({'success': False, 'message': message})
+
+# 获取用户分类权限路由（管理员用）
+@app.route('/admin/get_user_permissions/<int:user_id>', methods=['GET'])
+def admin_get_user_permissions(user_id):
+    if not is_admin_logged_in():
+        return jsonify({'success': False, 'message': '请先登录'})
+        
+    permissions = get_user_category_permissions(user_id)
+    return jsonify({'success': True, 'permissions': permissions})
+
+# 修改用户密码路由（管理员用）
+@app.route('/admin/change_user_password', methods=['POST'])
+def admin_change_user_password():
+    if not is_admin_logged_in():
+        return jsonify({'success': False, 'message': '请先登录'})
+        
+    # 尝试从JSON中获取数据，如果失败则从表单中获取
+    try:
+        data = request.get_json()
+        if data:
+            user_id = data.get('user_id')
+            new_password = data.get('new_password')
+        else:
+            user_id = request.form.get('user_id')
+            new_password = request.form.get('new_password')
+    except Exception as e:
+        user_id = request.form.get('user_id')
+        new_password = request.form.get('new_password')
+    
+    # 验证数据
+    if not user_id or not new_password:
+        return jsonify({'success': False, 'message': '用户ID和新密码不能为空'})
+        
+    # 验证密码长度
+    if len(new_password) < 8:
+        return jsonify({'success': False, 'message': '密码长度至少8位'})
+    
+    # 不允许修改管理员账户密码通过此接口
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_type FROM users WHERE id = ?", (user_id,))
+    user_type = cursor.fetchone()
+    conn.close()
+    
+    if user_type and user_type[0] == 'admin':
+        return jsonify({'success': False, 'message': '不允许修改管理员账户密码'})
+    
+    # 更新密码
+    success, message = change_user_password(user_id, new_password)
+    if success:
+        return jsonify({'success': True, 'message': message})
+    else:
+        return jsonify({'success': False, 'message': message})
 
 # 添加分类路由
 @app.route('/admin/add_category', methods=['POST'])
@@ -608,86 +1091,123 @@ def api_images(category_id):
     per_page = request.args.get('per_page', 20, type=int)
     search_term = request.args.get('search', '', type=str)
     view_mode = request.args.get('view_mode', 'waterfall', type=str)
+    sort_direction = request.args.get('sort', 'desc', type=str)  # 默认为降序
     
-    result = get_images_by_category(category_id, page, per_page, search_term)
-    
-    # 格式化图片数据
-    formatted_images = []
-    for img in result['images']:
-        # 数据库返回的顺序是: id, filename, filepath, upload_time
-        # 获取uploads目录的绝对路径
-        uploads_abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'uploads'))
+    try:
+        # 检查分类是否存在
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM categories WHERE id = ?", (category_id,))
+        category = cursor.fetchone()
+        if not category:
+            conn.close()
+            return jsonify({'success': False, 'message': '分类不存在'})
+        conn.close()
         
-        # 检查文件是否在uploads目录内
-        if os.path.commonpath([uploads_abs_path]) == os.path.commonpath([uploads_abs_path, img[2]]):
-            # 对于uploads目录内的文件，计算相对路径
-            rel_path = os.path.relpath(img[2], uploads_abs_path)
+        # 检查权限
+        # 1. 如果是默认分类，所有人都可以访问
+        if category[1] == '默认分类':
+            pass
+        # 2. 检查用户是否登录
+        elif not is_user_logged_in() and not is_admin_logged_in():
+            return jsonify({'success': False, 'message': '请先登录'})
+        # 3. 管理员可以访问所有分类
+        elif is_admin_logged_in():
+            pass
+        # 4. 检查普通用户是否有权限访问该分类
         else:
-            # 对于不在uploads目录内的文件，直接使用文件名
-            rel_path = os.path.basename(img[2])
+            accessible_categories = get_user_accessible_categories()
+            has_permission = False
+            for cat in accessible_categories:
+                if cat[0] == category_id:
+                    has_permission = True
+                    break
             
-        # 将Windows路径分隔符替换为URL路径分隔符
-        rel_path = rel_path.replace('\\', '/')
-        # 生成正确的图片URL路径
-        image_url = url_for('serve_uploads', filename=rel_path)
+            if not has_permission:
+                return jsonify({'success': False, 'message': '您没有权限访问该分类'})
         
-        # 处理时间戳，转换为UTC+8时间
-        upload_time = img[3]
-        if isinstance(upload_time, str):
-            # 如果是字符串形式的时间戳，尝试解析
+        result = get_images_by_category(category_id, page, per_page, search_term, sort_direction)
+
+        # 格式化图片数据
+        formatted_images = []
+        for img in result['images']:
+            # 数据库返回的顺序是: id, filename, filepath, upload_time
+            # 获取uploads目录的绝对路径
+            uploads_abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'uploads'))
+            
+            # 检查文件是否在uploads目录内
+            if os.path.commonpath([uploads_abs_path]) == os.path.commonpath([uploads_abs_path, img[2]]):
+                # 对于uploads目录内的文件，计算相对路径
+                rel_path = os.path.relpath(img[2], uploads_abs_path)
+            else:
+                # 对于不在uploads目录内的文件，直接使用文件名
+                rel_path = os.path.basename(img[2])
+                
+            # 将Windows路径分隔符替换为URL路径分隔符
+            rel_path = rel_path.replace('\\', '/')
+            # 生成正确的图片URL路径
+            image_url = url_for('serve_uploads', filename=rel_path)
+            
+            # 处理时间戳，转换为UTC+8时间
+            upload_time = img[3]
+            if isinstance(upload_time, str):
+                # 如果是字符串形式的时间戳，尝试解析
+                try:
+                    # 尝试解析SQLite的时间戳格式
+                    dt = datetime.strptime(upload_time, '%Y-%m-%d %H:%M:%S')
+                    # 设置为UTC+8时区
+                    utc8_tz = pytz.timezone('Asia/Shanghai')
+                    # 假设数据库中的时间是UTC时间，需要转换
+                    dt_utc = pytz.utc.localize(dt)
+                    dt_utc8 = dt_utc.astimezone(utc8_tz)
+                    # 格式化输出为UTC+8时间
+                    upload_time = dt_utc8.strftime('%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    # 如果解析失败，保持原格式
+                    pass
+            
+            # 获取图片实际尺寸和文件大小
+            width = None
+            height = None
+            size = None
+            
+            # 尝试获取文件大小
             try:
-                # 尝试解析SQLite的时间戳格式
-                dt = datetime.strptime(upload_time, '%Y-%m-%d %H:%M:%S')
-                # 设置为UTC+8时区
-                utc8_tz = pytz.timezone('Asia/Shanghai')
-                # 假设数据库中的时间是UTC时间，需要转换
-                dt_utc = pytz.utc.localize(dt)
-                dt_utc8 = dt_utc.astimezone(utc8_tz)
-                # 格式化输出为UTC+8时间
-                upload_time = dt_utc8.strftime('%Y-%m-%d %H:%M:%S')
-            except ValueError:
-                # 如果解析失败，保持原格式
-                pass
+                # 获取原始文件的绝对路径
+                original_file_path = img[2]  # 这是数据库中存储的原始文件路径
+                if os.path.exists(original_file_path):
+                    size = os.path.getsize(original_file_path)  # 获取文件大小（字节）
+            except Exception as e:
+                print(f"获取文件大小失败: {e}")
+            
+            # 尝试获取图片尺寸
+            try:
+                if Image and os.path.exists(original_file_path):
+                    with Image.open(original_file_path) as img_obj:
+                        width, height = img_obj.size
+            except Exception as e:
+                print(f"获取图片尺寸失败: {e}")
+            
+            formatted_images.append({
+                'id': img[0],
+                'filename': img[1],
+                'filepath': image_url,
+                'upload_time': upload_time,
+                'width': width,
+                'height': height,
+                'size': size
+            })
         
-        # 获取图片实际尺寸和文件大小
-        width = None
-        height = None
-        size = None
-        
-        # 尝试获取文件大小
-        try:
-            # 获取原始文件的绝对路径
-            original_file_path = img[2]  # 这是数据库中存储的原始文件路径
-            if os.path.exists(original_file_path):
-                size = os.path.getsize(original_file_path)  # 获取文件大小（字节）
-        except Exception as e:
-            print(f"获取文件大小失败: {e}")
-        
-        # 尝试获取图片尺寸
-        try:
-            if Image and os.path.exists(original_file_path):
-                with Image.open(original_file_path) as img_obj:
-                    width, height = img_obj.size
-        except Exception as e:
-            print(f"获取图片尺寸失败: {e}")
-        
-        formatted_images.append({
-            'id': img[0],
-            'filename': img[1],
-            'filepath': image_url,
-            'upload_time': upload_time,
-            'width': width,
-            'height': height,
-            'size': size
+        return jsonify({
+            'success': True,
+            'images': formatted_images,
+            'total_pages': result['total_pages'],
+            'current_page': result['current_page'],
+            'total_count': result['total_count'],
+            'view_mode': view_mode
         })
-    
-    return jsonify({
-        'images': formatted_images,
-        'total_pages': result['total_pages'],
-        'current_page': result['current_page'],
-        'total_count': result['total_count'],
-        'view_mode': view_mode
-    })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取图片失败: {str(e)}'})
 
 # 获取图片详情API
 @app.route('/api/image/<int:image_id>')
@@ -840,4 +1360,4 @@ if __name__ == '__main__':
         scan_folder_and_update_db(default_category[1], default_category[0])
     
     # 开放所有IP访问，设置host为0.0.0.0
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=False, host='0.0.0.0')
