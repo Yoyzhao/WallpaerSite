@@ -147,24 +147,27 @@
         /* 关闭按钮样式 */
         .close-btn {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 15px;
+            right: 15px;
             color: white;
-            font-size: 2em;
+            font-size: 0.8em;
             cursor: pointer;
-            background: rgba(0, 0, 0, 0.5);
-            width: 50px;
-            height: 50px;
+            background: rgba(0, 0, 0, 0.6);
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
             z-index: 1001;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
         }
         
         .close-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(220, 53, 69, 0.8);
+            transform: scale(1.15);
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
         }
         
         /* 翻页按钮样式 */
@@ -172,23 +175,26 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             color: white;
             border: none;
-            width: 50px;
-            height: 50px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5em;
-            transition: background 0.3s ease;
+            font-size: 0.7em;
+            transition: all 0.3s ease;
             z-index: 1001;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
         }
         
         .nav-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(0, 123, 255, 0.8);
+            transform: translateY(-50%) scale(1.15);
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.4);
         }
         
         .prev-btn {
@@ -202,26 +208,30 @@
         /* 操作按钮样式 */
         .image-viewer-actions {
             position: absolute;
-            bottom: 80px;
+            bottom: 60px;
             display: flex;
-            gap: 15px;
+            gap: 10px;
         }
         
         .action-btn {
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             color: white;
             border: none;
-            padding: 10px 15px;
+            padding: 6px 12px;
             border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 5px;
-            transition: background 0.3s ease;
+            gap: 4px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
         }
         
         .action-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.8);
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
         
         .delete-btn {
@@ -230,6 +240,13 @@
         
         .delete-btn:hover {
             background: rgba(220, 20, 60, 0.9);
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(220, 20, 60, 0.4);
+        }
+        
+        /* 统一图标大小 */
+        .action-btn i {
+            font-size: 12px;
         }
     
     /* 视图切换样式 */
@@ -534,33 +551,7 @@
         display: flex;
     }
     
-    /* 关闭按钮样式 */
-    .close-btn {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        background-color: rgba(0, 0, 0, 0.5);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        cursor: pointer;
-        opacity: 0;
-        transition: opacity 0.3s ease, background-color 0.3s ease;
-        z-index: 1002;
-    }
-    
-    .image-viewer:hover .close-btn {
-        opacity: 1;
-    }
-    
-    .close-btn:hover {
-        background-color: rgba(255, 0, 0, 0.7);
-    }
+    /* 关闭按钮样式已在文件开头定义 */
     
     /* 图片查看器内容容器 */
     .image-viewer-content {
@@ -581,43 +572,7 @@
         z-index: 1000;
     }
     
-    /* 导航按钮样式 - 放置在屏幕最左侧和最右侧 */
-    .nav-btn {
-        position: fixed;
-        top: 50%;
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background-color: rgba(0, 0, 0, 0.5);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        cursor: pointer;
-        border: none;
-        transform: translateY(-50%);
-        opacity: 0;
-        transition: opacity 0.3s ease, background-color 0.3s ease, transform 0.2s ease;
-        z-index: 1001;
-    }
-    
-    .image-viewer:hover .nav-btn {
-        opacity: 1;
-    }
-    
-    .nav-btn:hover {
-        background-color: rgba(0, 0, 0, 0.8);
-        transform: translateY(-50%) scale(1.1);
-    }
-    
-    .prev-btn {
-        left: 20px;
-    }
-    
-    .next-btn {
-        right: 20px;
-    }
+    /* 导航按钮样式已在文件开头定义 */
     
     /* 操作按钮样式 - 放置在屏幕右下侧 */
     .image-viewer-actions {
@@ -649,32 +604,7 @@
         opacity: 1;
     }
     
-    .action-btn {
-        padding: 12px 24px;
-        border-radius: 30px;
-        background-color: rgba(0, 0, 0, 0.7);
-        color: white;
-        border: none;
-        cursor: pointer;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-    
-    .action-btn:hover {
-        background-color: rgba(0, 0, 0, 0.9);
-        transform: scale(1.05);
-    }
-    
-    .delete-btn {
-        background-color: rgba(255, 0, 0, 0.7);
-    }
-    
-    .delete-btn:hover {
-        background-color: rgba(255, 0, 0, 0.9);
-    }
+    /* 操作按钮样式已在文件上方定义 */
     
     /* 图片信息样式 - 调整层级确保能在图片查看器上显示 */
     .image-viewer-info {

@@ -614,6 +614,51 @@ def delete_category(category_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'删除失败: {str(e)}'})
 
+# 修改用户密码函数
+def change_user_password(user_id, new_password):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        # 哈希新密码
+        hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
+        # 更新密码
+        cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user_id))
+        conn.commit()
+        # 检查是否有记录被更新
+        if cursor.rowcount > 0:
+            return True, "密码修改成功"
+        else:
+            return False, "用户不存在"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        conn.close()
+
+
+def verify_admin_password(username, current_password):
+    """验证管理员密码"""
+    try:
+        # 连接数据库
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        
+        # 查询管理员用户
+        cursor.execute('SELECT password FROM users WHERE username = ? AND user_type = ?', (username, 'admin'))
+        result = cursor.fetchone()
+        
+        # 关闭连接
+        conn.close()
+        
+        # 验证密码
+        if result and result[0] == hashlib.sha256(current_password.encode()).hexdigest():
+            return True
+        return False
+    except Exception as e:
+        print(f"验证管理员密码失败: {str(e)}")
+        return False
+
+
 # 首页路由
 @app.route('/')
 def index():
@@ -772,6 +817,62 @@ def admin_delete_user(user_id):
     else:
         return jsonify({'success': False, 'message': message})
 
+
+@app.route('/admin/change_admin_password', methods=['POST'])
+def admin_change_admin_password():
+    """管理员修改自己的密码"""
+    try:
+        if not is_admin_logged_in():
+            return jsonify({'success': False, 'message': '请先登录'})
+        
+        # 获取当前登录的管理员用户信息
+        username = session.get('admin_username')
+        
+        # 获取请求数据
+        try:
+            data = request.get_json()
+            if data:
+                current_password = data.get('current_password')
+                new_password = data.get('new_password')
+            else:
+                current_password = request.form.get('current_password')
+                new_password = request.form.get('new_password')
+        except Exception as e:
+            current_password = request.form.get('current_password')
+            new_password = request.form.get('new_password')
+        
+        # 验证数据完整性
+        if not current_password or not new_password:
+            return jsonify({'success': False, 'message': '请填写完整的密码信息'})
+        
+        # 验证密码长度
+        if len(new_password) < 8:
+            return jsonify({'success': False, 'message': '新密码长度至少为8位'})
+        
+        # 验证当前密码是否正确
+        if not verify_admin_password(username, current_password):
+            return jsonify({'success': False, 'message': '当前密码不正确'})
+        
+        # 获取管理员用户ID
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM users WHERE username = ? AND user_type = ?', (username, 'admin'))
+        user_id = cursor.fetchone()[0]
+        conn.close()
+        
+        # 修改密码
+        success, message = change_user_password(user_id, new_password)
+        
+        if success:
+            # 可以选择强制管理员重新登录，但这里不实现这个功能
+            return jsonify({'success': True, 'message': '管理员密码修改成功'})
+        else:
+            return jsonify({'success': False, 'message': message})
+            
+    except Exception as e:
+        print(f"管理员修改密码出错: {str(e)}")
+        return jsonify({'success': False, 'message': f'修改密码失败: {str(e)}'})
+
 # 设置用户分类权限路由（管理员用）
 @app.route('/admin/set_user_permissions/<int:user_id>', methods=['POST'])
 def admin_set_user_permissions(user_id):
@@ -795,6 +896,50 @@ def admin_get_user_permissions(user_id):
         
     permissions = get_user_category_permissions(user_id)
     return jsonify({'success': True, 'permissions': permissions})
+
+# 修改用户密码路由（管理员用）
+@app.route('/admin/change_user_password', methods=['POST'])
+def admin_change_user_password():
+    if not is_admin_logged_in():
+        return jsonify({'success': False, 'message': '请先登录'})
+        
+    # 尝试从JSON中获取数据，如果失败则从表单中获取
+    try:
+        data = request.get_json()
+        if data:
+            user_id = data.get('user_id')
+            new_password = data.get('new_password')
+        else:
+            user_id = request.form.get('user_id')
+            new_password = request.form.get('new_password')
+    except Exception as e:
+        user_id = request.form.get('user_id')
+        new_password = request.form.get('new_password')
+    
+    # 验证数据
+    if not user_id or not new_password:
+        return jsonify({'success': False, 'message': '用户ID和新密码不能为空'})
+        
+    # 验证密码长度
+    if len(new_password) < 8:
+        return jsonify({'success': False, 'message': '密码长度至少8位'})
+    
+    # 不允许修改管理员账户密码通过此接口
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_type FROM users WHERE id = ?", (user_id,))
+    user_type = cursor.fetchone()
+    conn.close()
+    
+    if user_type and user_type[0] == 'admin':
+        return jsonify({'success': False, 'message': '不允许修改管理员账户密码'})
+    
+    # 更新密码
+    success, message = change_user_password(user_id, new_password)
+    if success:
+        return jsonify({'success': True, 'message': message})
+    else:
+        return jsonify({'success': False, 'message': message})
 
 # 添加分类路由
 @app.route('/admin/add_category', methods=['POST'])
