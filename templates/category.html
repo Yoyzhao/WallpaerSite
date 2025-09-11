@@ -217,13 +217,13 @@
             background: rgba(0, 0, 0, 0.6);
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 4px 10px;
             border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 12px;
+            gap: 3px;
+            font-size: 11px;
             transition: all 0.3s ease;
             box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
         }
@@ -570,6 +570,14 @@
         object-fit: contain;
         position: relative;
         z-index: 1000;
+        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        opacity: 1;
+    }
+    
+    /* 图片切换时的淡出效果 */
+    .image-viewer-image.fade-out {
+        opacity: 0;
+        transform: scale(0.95);
     }
     
     /* 导航按钮样式已在文件开头定义 */
@@ -577,10 +585,10 @@
     /* 操作按钮样式 - 放置在屏幕右下侧 */
     .image-viewer-actions {
         position: fixed;
-        bottom: 30px;
-        right: 30px;
+        bottom: 20px;
+        right: 20px;
         display: flex;
-        gap: 15px;
+        gap: 10px;
         opacity: 0;
         transition: opacity 0.3s ease;
         z-index: 1001;
@@ -588,15 +596,15 @@
     
     /* 页数指示器样式 */
     .page-indicator {
-        padding: 12px 24px;
+        padding: 8px 16px;
         border-radius: 30px;
         background-color: rgba(0, 0, 0, 0.7);
         color: white;
-        font-size: 16px;
+        font-size: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-width: 80px;
+        min-width: 70px;
         pointer-events: none;
     }
     
@@ -794,10 +802,38 @@
                     const viewerDetails = document.getElementById('viewer-details');
                     
                     if (viewerImage && viewerFilename && viewerDetails && imageViewer) {
-                        // 设置图片源和信息
-                        viewerImage.src = image.filepath;
-                        viewerFilename.textContent = image.filename;
-                        viewerDetails.textContent = `尺寸: ${image.width || '未知'}x${image.height || '未知'} | 大小: ${image.size ? (image.size / 1024).toFixed(1) : '未知'}KB | 上传时间: ${image.upload_time ? new Date(image.upload_time).toLocaleString() : '未知'}`;
+                        // 如果图片已经在显示中，添加淡出效果
+                        if (viewerImage.src && viewerImage.src !== image.filepath) {
+                            viewerImage.classList.add('fade-out');
+                            
+                            // 等待淡出动画完成后再更改图片源
+                            setTimeout(() => {
+                                // 设置新图片源和信息
+                                viewerImage.src = image.filepath;
+                                viewerFilename.textContent = image.filename;
+                                viewerDetails.textContent = `尺寸: ${image.width || '未知'}x${image.height || '未知'} | 大小: ${image.size ? (image.size / 1024).toFixed(1) : '未知'}KB | 上传时间: ${image.upload_time ? new Date(image.upload_time).toLocaleString() : '未知'}`;
+                                
+                                // 监听图片加载完成事件
+                                const onLoadComplete = () => {
+                                    // 移除淡出效果，显示新图片
+                                    viewerImage.classList.remove('fade-out');
+                                    viewerImage.removeEventListener('load', onLoadComplete);
+                                };
+                                
+                                // 如果图片已经缓存，直接显示
+                                if (viewerImage.complete) {
+                                    onLoadComplete();
+                                } else {
+                                    // 否则等待图片加载完成
+                                    viewerImage.addEventListener('load', onLoadComplete);
+                                }
+                            }, 300); // 与CSS过渡时间保持一致
+                        } else {
+                            // 首次加载图片，直接设置源和信息
+                            viewerImage.src = image.filepath;
+                            viewerFilename.textContent = image.filename;
+                            viewerDetails.textContent = `尺寸: ${image.width || '未知'}x${image.height || '未知'} | 大小: ${image.size ? (image.size / 1024).toFixed(1) : '未知'}KB | 上传时间: ${image.upload_time ? new Date(image.upload_time).toLocaleString() : '未知'}`;
+                        }
                         
                         // 显示图片查看器
                         imageViewer.classList.add('active');
